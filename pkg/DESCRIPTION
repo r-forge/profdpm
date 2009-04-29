@@ -1,0 +1,10 @@
+Package: profdpm
+Type: Package
+Title: Profile Dirichlet Process Mixtures
+Version: 1.0
+Date: 2009-04-09
+Author: Matt Shotwell
+Maintainer: Matt Shotwell <shotwelm@musc.edu>
+Description: This package performs profile inference for models utilizing the Dirichlet process mixture (DPM). This method is not based on Markov chain Monte Carlo methods, as are most other mechanisms of inference in the DPM. This methodology searches for the maximum posterior (MAP) estimate for the cluster indicators in the DPM model.
+License: GPL
+LazyLoad: yes
