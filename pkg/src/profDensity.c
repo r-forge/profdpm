@@ -1,10 +1,10 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <Rmath.h>
+#include "util.h"
 #include "pdpm.h"
 
 pdpm_t * pdpm_R_alloc(unsigned int size);
-SEXP getListElementByName(SEXP list, const char * name);
 
 SEXP profDensity(SEXP data, SEXP parm, SEXP iter, SEXP crit) {
   SEXP retval, elem, names, class, index;
@@ -81,14 +81,4 @@ pdpm_t * pdpm_R_alloc(unsigned int size) {
   return(obj);
 }
 
-SEXP getListElementByName(SEXP list, const char * name) {
-  SEXP elem = R_NilValue, names = getAttrib(list, R_NamesSymbol);
-  unsigned int i;
-  for (i = 0; i < LENGTH(list); i++) {
-    if(strcmp(CHAR(STRING_ELT(names, i)), name) == 0) {
-      elem = VECTOR_ELT(list, i);
-      break;
-    }
-  }
-  return(elem);
-}
+

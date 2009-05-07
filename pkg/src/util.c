@@ -4,8 +4,8 @@
 
 double lfactorial(unsigned int x) {
   /* Jolley, L.B.W. (1961) Summation of Series. pp. 28
-   * ISBN 0-486-60023-8
-   */
+  ** ISBN 0-486-60023-8
+  */
   return(LN_SQRT_2PI + (0.5 + x)*log(x) - x);
 }
 
@@ -69,4 +69,16 @@ void strip_both(char * str) {
   strip_front(str);
   strip_rear(str);
 } 
+/* R */
 
+SEXP getListElementByName(SEXP list, const char * name) {
+  SEXP elem = R_NilValue, names = getAttrib(list, R_NamesSymbol);
+  unsigned int i;
+  for (i = 0; i < LENGTH(list); i++) {
+    if(strcmp(CHAR(STRING_ELT(names, i)), name) == 0) {
+      elem = VECTOR_ELT(list, i);
+      break;
+    }
+  }
+  return(elem);
+}

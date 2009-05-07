@@ -11,9 +11,11 @@ double sumsq(double * vec, unsigned int size);
 double stdev(double * vec, unsigned int size);
 
 /* string */
-
 void strip_all(char * str);
 void strip_front(char * str);
 void strip_rear(char * str);
 void strip_both(char * str); 
+
+/* R */
+SEXP getListElementByName(SEXP list, const char * name);
 
