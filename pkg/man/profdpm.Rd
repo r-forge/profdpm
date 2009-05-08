@@ -18,7 +18,8 @@ LazyLoad: \tab yes\cr
 }
 Contents
 \itemize{
-  \item{profDensity}{ nonparametric density estimation via the DPM }
+  \item{profDensity}{ Dirichlet process mixture density estimation }
+  \item{profLinear}{ Dirichlet process mixture of linear models }
   \item{crbr08}{ the Cooper River Bridge Run 2008 dataset }
 }
 }
