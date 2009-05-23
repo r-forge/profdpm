@@ -56,7 +56,7 @@ void pdpm_init(pdpm_t * obj, unsigned int grps) {
 
 void pdpm_init_smart(pdpm_t * obj) {
   unsigned int i, j;
-  double mse, mse_max = 50; /* mse_max = obj->b0 / obj->a0; */
+  double mse, mse_max = obj->b0 / obj->a0; 
   obj->usize = 0;
   obj->del = 0;
   memset((void *) obj->sum, 0x00, obj->size * sizeof(double));
@@ -174,11 +174,12 @@ void pdpm_cycle(pdpm_t * obj, unsigned int iter) {
 
 void pdpm_shuffle(pdpm_t * obj, unsigned int iter, double crit) {
   unsigned int i, to, icount, nitems, nsmall, cent, *items, *oldind, dec;
+  unsigned int ccount = 0;
   double olddel, del1, del2;
   dec = obj->size >= 200 ? obj->size / 20 : 10;
 
-  /* shuffle 10% of obj->size */
-  nitems = (obj->size / 10 + 1);
+  /* shuffle 50% of obj->size */
+  nitems = (obj->size / 50 + 1);
   items = (unsigned int *) R_alloc(obj->size, sizeof(unsigned int));
   oldind = (unsigned int *) R_alloc(obj->size, sizeof(unsigned int));
 
@@ -211,9 +212,9 @@ void pdpm_shuffle(pdpm_t * obj, unsigned int iter, double crit) {
     }
 
     /* if the overall del is not positive, move items back to 
-     * original index. increment and check stopping criterion
+     * original index. 
      */
-    if( del1 < 0 ) {
+    if( del1 <= 0 ) {
       for(i = 0; i < nitems; i++) {
         pdpm_item_move(obj, items[i], oldind[items[i]]);
       }
@@ -235,17 +236,21 @@ void pdpm_shuffle(pdpm_t * obj, unsigned int iter, double crit) {
         }
       }
       else { del1 += del2; }
+
+      /* check stopping criterion */
       olddel = obj->del;
       obj->del += del1;
-      if(olddel > 0 && (del1 / olddel) < crit) { break; }
+      if(olddel == 0 || (del1 / olddel) < crit) {
+        if(++ccount > 10) { break; }
+      }
     }
 
     /* print iteration information */
     if(icount % cent == 0) { 
-     /* Rprintf("\roptimizing: iter %6d, change %6f groups %3d", icount, obj->del, obj->usize); */
+      Rprintf("\roptimizing: iter %6d, change %6f groups %3d", icount, obj->del, obj->usize); 
     } 
   }
- /* Rprintf("\roptimizing: iter %6d, change %6f groups %3d\n", icount,  obj->del, obj->usize); */
+  Rprintf("\roptimizing: iter %6d, change %6f groups %3d\n", icount,  obj->del, obj->usize);
 }
 
 void pdpm_chunk(pdpm_t * obj, unsigned int iter, double crit) {
