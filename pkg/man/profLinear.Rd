@@ -5,20 +5,21 @@
   This function performs inference in a Dirichlet process mixture of linear models using the profile method.
 }
 \usage{
-  profLinear(form, data, parm, iter = 1000, crit = 0.001)
+  profLinear(form, data, group, parm, iter = 1000, crit = 0.001)
 }
 \arguments{
   \item{form}{a formula object}
   \item{data}{a dataframe}
+  \item{group}{an optional vector of integers indicating grouping among observations}
   \item{parm}{a list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma dirichlet process mixture (See Details)}
   \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm}
   \item{crit}{an numeric value specifying the minimum proportional gain in the log posterior relative to  the cumulative gain over all previous iterations. This value constitutes a 'stopping criterion' for the optimization algorithm.}
 }
 \value{
-  the formula object passed into the function
+  An instance of the class profLinear
 }
 \details{
-This function will fit a Dirichlet process mixture of linear models using the profile method. The function does nothing at the moment and simply returns the formula object that is initially passed in as the \sQuote{form} argument.
+This function will fit a Dirichlet process mixture of linear models using the profile method. The function does nothing at the moment and simply returns the an empty instance of the profLinear class.
 }
 
 \examples{
