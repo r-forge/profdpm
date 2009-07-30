@@ -4,85 +4,180 @@
 #include "util.h"
 #include "pdpmlm.h"
 
-pdpmlm_t * pdpmlm_R_alloc(unsigned int size);
+void debug( char * msg ) { Rprintf("debug: %s\n", msg); }
+void memerror() { error("failed to allocate memory"); }
 
-//SEXP profDensity(SEXP data, SEXP parm, SEXP iter, SEXP crit) {
-
-SEXP profLinear(SEXP form, SEXP data, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
- 
-  SEXP retval, elem, names, class, index;
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
+  SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
-  unsigned int i;
+  unsigned int i, j, k, onei=1;
   double s, m, a, b; 
- 
-  PROTECT(retval = allocVector(VECSXP, 8));
-  PROTECT(names = allocVector(STRSXP, 8));
+  double *xp, *yp, oned=1.0, zerod=0.0;
+
+  //0. setup the return value 
+  PROTECT(retval = allocVector(VECSXP, 9));
+  PROTECT(names = allocVector(STRSXP, 9));
   PROTECT(class = allocVector(STRSXP, 1));
-  PROTECT(index = allocVector(INTSXP, LENGTH(data)));
-  SET_STRING_ELT(names, 0, mkChar("data"));
-  SET_STRING_ELT(names, 1, mkChar("parm"));
+  PROTECT(clust = allocVector(INTSXP, LENGTH(y)));
+  SET_STRING_ELT(names, 0, mkChar("y"));
+  SET_STRING_ELT(names, 1, mkChar("x"));
   SET_STRING_ELT(names, 2, mkChar("group"));
-  SET_STRING_ELT(names, 3, mkChar("index"));
-  SET_STRING_ELT(names, 4, mkChar("a"));
-  SET_STRING_ELT(names, 5, mkChar("b"));
-  SET_STRING_ELT(names, 6, mkChar("m"));
-  SET_STRING_ELT(names, 7, mkChar("s"));
+  SET_STRING_ELT(names, 3, mkChar("parm"));
+  SET_STRING_ELT(names, 4, mkChar("clust"));
+  SET_STRING_ELT(names, 5, mkChar("a"));
+  SET_STRING_ELT(names, 6, mkChar("b"));
+  SET_STRING_ELT(names, 7, mkChar("m"));
+  SET_STRING_ELT(names, 8, mkChar("s"));
   SET_STRING_ELT(class, 0, mkChar("profLinear"));
   setAttrib(retval, R_NamesSymbol, names);
   setAttrib(retval, R_ClassSymbol, class);
-  SET_VECTOR_ELT(retval, 0, data);
-  SET_VECTOR_ELT(retval, 1, parm);
+  SET_VECTOR_ELT(retval, 0, y);
+  SET_VECTOR_ELT(retval, 1, x);
   SET_VECTOR_ELT(retval, 2, group);
-  SET_VECTOR_ELT(retval, 3, index);
- 
-  obj        = pdpmlm_R_alloc((unsigned int) LENGTH(data));
-  obj->data  = (double *) REAL(VECTOR_ELT(retval, 0));
-  obj->group = (unsigned int *) INTEGER(VECTOR_ELT(retval, 2));
-  obj->index = (unsigned int *) INTEGER(VECTOR_ELT(retval, 3));
+  SET_VECTOR_ELT(retval, 3, parm);
+  SET_VECTOR_ELT(retval, 4, clust);
+
+  //1. Allocate memory for obj and pgr
+  obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
+  if( obj == NULL ) { memerror(); }
+  obj->pgr = (unsigned int *) pdpmlm_alloc( obj->p, sizeof(unsigned int) );
+  if( obj->pgr == NULL ) { memerror(); }
+  debug("step 1 ok");
+
+  //2. Make assignments, check priors
+  obj->y     = REAL(y);
+  obj->x     = REAL(x);
+  obj->vgr   = INTEGER(group);
+  dim        = getAttrib(x, R_DimSymbol); 
+  obj->p     = INTEGER(dim)[ 1 ];
+  obj->q     = INTEGER(dim)[ 0 ];
   elem       = getListElementByName(parm, "alpha");
-  obj->alpha = elem == R_NilValue ? DEFAULT_ALPHA : *(REAL(elem));
-  elem       = getListElementByName(parm, "a0");
-  obj->a0    = elem == R_NilValue ? DEFAULT_A0 : *(REAL(elem));
-  elem       = getListElementByName(parm, "b0");
-  obj->b0    = elem == R_NilValue ? DEFAULT_B0 : *(REAL(elem));
-  elem       = getListElementByName(parm, "m0");
-  obj->m0    = elem == R_NilValue ? DEFAULT_M0 : *(REAL(elem));
+  if( elem == R_NilValue ) {
+    warning( "list item \"alpha\" missing from parm, using default value" );
+    obj->alp = DEFAULT_ALP;
+  } else { obj->alp = *(REAL(elem)); }
   elem       = getListElementByName(parm, "s0");
-  obj->s0    = elem == R_NilValue ? DEFAULT_S0 : *(REAL(elem));
+  if( elem == R_NilValue ) {
+    warning( "list item \"s0\" missing from parm, using default value" );
+    obj->s0 = DEFAULT_S0;
+  } else { obj->s0 = *(REAL(elem)); }
+  elem       = getListElementByName(parm, "m0");
+  if( elem == R_NilValue ) {
+    warning( "list item \"m0\" missing from parm, using default values" );
+    obj->m0 = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
+    for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
+  } else if ( LENGTH(elem) < obj->q ) {
+    warning( "list item \"m0\" should be of length ncol(x), using default values" );
+    obj->m0 = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
+    for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
+  } else { obj->m0 = REAL(elem); }
+  elem       = getListElementByName(parm, "a0");
+  if( elem == R_NilValue ) { 
+    warning( "list item \"a0\" missing, using default value" );
+    obj->a0 = DEFAULT_A0;
+  } else { obj->a0 = *(REAL(elem)); }
+  elem       = getListElementByName(parm, "b0");
+  if( elem == R_NilValue ) {
+    warning( "list item \"b0\" missing, using default value" );
+    obj->b0 = DEFAULT_B0;
+  } else { obj->b0 = *(REAL(elem)); }
+  debug("step 2 ok");
 
-  //pdpmlm_chunk(obj, *(INTEGER(iter)), *(REAL(crit))); /* optimization */
-
-  //pdpmlm_sort(obj);
-  //for(i = 0; i < obj->size; i++) {
-  //  obj->index[i]++;
-  //}
-  SET_VECTOR_ELT(retval, 4, allocVector(REALSXP, obj->usize));
-  SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->usize));
-  SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->usize));
-  SET_VECTOR_ELT(retval, 7, allocVector(REALSXP, obj->usize));
-  for(i = 0; i < obj->usize; i++) {
-    s = obj->s0 + obj->unique[i];
-    m = ( obj->s0 * obj->m0 + obj->sum[i] ) / s;
-    a = obj->a0 + obj->unique[i];
-    b = obj->b0 + obj->sumsq[i] + obj->s0 * pow(obj->m0,2) - s * pow(m,2);   
-    REAL(VECTOR_ELT(retval, 4))[i] = a;
-    REAL(VECTOR_ELT(retval, 5))[i] = b;
-    REAL(VECTOR_ELT(retval, 6))[i] = m;
-    REAL(VECTOR_ELT(retval, 7))[i] = s;
+  //3. Compute pgr, ngr
+  obj->ngr = 0;
+  for( i = 0; i < obj->p; i++ ) { obj->pgr[ i ] = 0; }
+  for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
+  for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
+  debug("step 3 ok");
+ 
+  //4. Allocate and zero memory vcl, pcl, ncl
+  obj->ncl = 0;
+  obj->vcl = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof(unsigned int) );
+  obj->pcl = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof(unsigned int) );
+  if( obj->pcl == NULL ) { memerror(); }
+  for( i = 0; i < obj->ngr; i++ ) { 
+    obj->vcl[ i ] = BAD_CLS;
+    obj->pcl[ i ] = 0; 
   }
+  debug("step 4 ok");
 
+  //5. Allocate and zero memory for xxgr xygr, and yygr
+  obj->xxgr = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
+  if( obj->xxgr == NULL ) { memerror(); }
+  obj->xygr = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
+  if( obj->xygr == NULL ) { memerror(); }
+  obj->yygr = (double *) pdpmlm_alloc( obj->ngr, sizeof(double) );
+  if( obj->yygr == NULL ) { memerror(); }
+  for( i = 0; i < obj->ngr; i++ ) {
+    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
+    if( obj->xxgr[ i ] == NULL ) { memerror(); }
+    obj->xygr[i] = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
+    if( obj->xygr[ i ] == NULL ) { memerror(); }
+    obj->yygr[i] = 0.0;
+    for( j = 0; j < obj->q; j++ ) {
+      obj->xygr[ i ][ j ] = 0.0;
+      for( k = 0; k < obj->q; k++ ) {
+        obj->xxgr[ i ][ k + j*obj->q ] = 0.0;
+      }
+    }
+  }
+  debug("step 5 ok");
+  
+  //6. Compute xxgr, xygr, yygr
+  for( i = 0; i < obj->p; i++ ) {
+       xp = obj->x + i*obj->q;
+       yp = obj->y + i;
+       F77_CALL(dgemm)("N","T",
+                      &obj->q,&obj->q,&onei,&oned,
+                      xp,&obj->q,xp,&obj->q,
+                      &oned,obj->xxgr[ obj->vgr[ i ] ],&obj->q); 
+       F77_CALL(daxpy)(&obj->q, yp, xp, &onei, obj->xygr[ obj->vgr[ i ] ], &onei); 
+       obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
+  }
+  debug("step 6 ok");
+
+  //7. allocate and zero xxcl, xycl, yycl
+  obj->xxcl = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
+  if( obj->xxcl == NULL ) { memerror(); }
+  obj->xycl = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
+  if( obj->xycl == NULL ) { memerror(); }
+  obj->yycl = (double *) pdpmlm_alloc( obj->ngr, sizeof(double) );
+  if( obj->yycl == NULL ) { memerror(); }
+  for( i = 0; i < obj->ngr; i++ ) {
+    obj->xxcl[ i ] = NULL;
+    obj->xycl[ i ] = NULL;
+    obj->yycl[ i ] = 0.0;
+  }
+  debug("step 7 ok");
+
+  pdpmlm_add( obj, 0, 0 );
+  pdpmlm_Rdump( obj );
+/*
+  SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->r)); //a
+  SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->r)); //b
+  SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->r)); //m
+  SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->r)); //s
+  i = 0;
+  for(ind = 0; ind < obj->p; ind++) {
+    if( obj->inc[ind] > 0 ) {
+      SET_VECTOR_ELT(VECTOR_ELT(retval, 7), i, allocVector(REALSXP, obj->q));
+      SET_VECTOR_ELT(VECTOR_ELT(retval, 8), i, allocVector(REALSXP, obj->q*obj->q));
+      dim = allocVector(INTSXP, 2);
+      INTEGER(dim)[0] = obj->q;
+      INTEGER(dim)[1] = obj->q;
+      setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), i), R_DimSymbol, dim);
+      pdpmlm_parm(
+        obj,
+        ind,
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), i)),
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), i)),
+        REAL(VECTOR_ELT(retval, 6))+i,
+        REAL(VECTOR_ELT(retval, 5))+i
+      );
+      i++;
+    }
+  }
+*/
   UNPROTECT(4);
   return(retval);
-}
-
-pdpmlm_t * pdpmlm_R_alloc(unsigned int size) {
-  pdpmlm_t * obj;
-  obj         = (pdpmlm_t *) R_alloc(1, sizeof(pdpmlm_t));
-  obj->datasq = (double *) R_alloc(size, sizeof(double));
-  obj->sum    = (double *) R_alloc(size, sizeof(double));
-  obj->sumsq  = (double *) R_alloc(size, sizeof(double));
-  obj->unique = (unsigned int *) R_alloc(size, sizeof(unsigned int));
-  obj->indmap = (unsigned int *) R_alloc(size, sizeof(unsigned int));
-  obj->size   = size;
-  return(obj);
 }

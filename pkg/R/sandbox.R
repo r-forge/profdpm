@@ -1,4 +1,4 @@
-sandbox <- function() {
-  .Call("sandbox", PACKAGE="profdpm")
+sandbox <- function(x) {
+  .Call("sandbox", x,  PACKAGE="profdpm")
 }
 

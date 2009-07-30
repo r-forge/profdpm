@@ -5,11 +5,11 @@
   This function performs inference in a Dirichlet process mixture of linear models using the profile method.
 }
 \usage{
-  profLinear(form, data, group, parm, iter = 1000, crit = 0.001)
+  profLinear(y, x, group, parm, iter = 1000, crit = 0.001)
 }
 \arguments{
-  \item{form}{a formula object}
-  \item{data}{a dataframe}
+  \item{y}{a numeric vector observations}
+  \item{x}{a numeric matrix of covariates}
   \item{group}{an optional vector of integers indicating grouping among observations}
   \item{parm}{a list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma dirichlet process mixture (See Details)}
   \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm}
@@ -24,7 +24,14 @@ This function will fit a Dirichlet process mixture of linear models using the pr
 
 \examples{
 library(profdpm)
-data(crbr08)
-fit <- profLinear(a~b, crbr08, list(c=1,d=1))
+x0 <- matrix(rnorm(100, 0, 3), 50, 2)
+x1 <- matrix(rnorm(100, 0, 3), 50, 2)
+y0 <- x0[,1] + rnorm(50, 0, 1)
+y1 <- 10 - x1[,1] + rnorm(50, 1, 1)
+x  <- rbind(x0, x1)
+y  <- c(y0, y1)
+g  <- rep(seq(0,3),25)
+p  <- list(alpha=0.001,a0=0.001,b0=0.001,m0=0,s0=1)
+fit<- profLinear(y, x, g, p)
 }
 \author{Matt Shotwell}
