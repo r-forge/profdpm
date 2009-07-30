@@ -121,9 +121,18 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
 
 double pdpmlm_logp( pdpmlm_t * obj ) {
-  // 1. compute the log posterior value.
-  return 0.0;
+  unsigned int i, cls;
+  double logp = obj->alp * log( obj->ncl ) - lfactorial( obj->ncl );
+  cls = 0;
+  for( i = 0; i < obj->ncl; i++ ) {
+    while( obj->pcl[ cls ] == 0 ) { cls++; }
+    pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
+    logp += lgamma(obj->a/2) - obj->a/2*log(obj->b/2);
+    cls++;
+  }
+  return logp;
 }
+
 
 void pdpmlm_Rdump( pdpmlm_t * obj ) {
   unsigned int i, j, cls;
@@ -165,10 +174,11 @@ void pdpmlm_Rdump( pdpmlm_t * obj ) {
     pdpmlm_printf( "cluster %u\n", cls );    
     pdpmlm_printf( "xxcl\n" );
     printRealVector( obj->xxcl[ cls ], obj->q * obj->q, 1 );
-    pdpmlm_printf( "xygr\n" );
+    pdpmlm_printf( "xycl\n" );
     printRealVector( obj->xycl[ cls ], obj->q, 1 );
-    pdpmlm_printf( "yygr\n" );
+    pdpmlm_printf( "yycl\n" );
     printRealVector( &obj->yycl[ cls ], 1, 1 );
+    cls++; 
   }
 }
 
