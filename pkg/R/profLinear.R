@@ -33,7 +33,7 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=0.001) {
   ret$x <- t(ret$x)
   ret$x[ord,] <- ret$x
   ret$group[ord] <- ret$group
-  ret$index[ord] <- ret$index
+  ret$clust[ord] <- ret$clust
   return(ret)  
 }
 

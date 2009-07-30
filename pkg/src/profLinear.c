@@ -10,7 +10,7 @@ void memerror() { error("failed to allocate memory"); }
 SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
-  unsigned int i, j, k, onei=1;
+  unsigned int i, j, k, cls, onei=1;
   double s, m, a, b; 
   double *xp, *yp, oned=1.0, zerod=0.0;
 
@@ -150,34 +150,46 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   }
   debug("step 7 ok");
 
+  //8. allocate s, m, and buf
+  obj->s = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
+  if( obj->s == NULL ) { memerror(); }
+  obj->m = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
+  if( obj->m == NULL ) { memerror(); }
+  obj->buf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
+  if( obj->buf == NULL ) { memerror(); }
+  debug("step 8 ok");
+
   pdpmlm_add( obj, 0, 0 );
+  pdpmlm_add( obj, 1, 1 );
+  pdpmlm_add( obj, 2, 2 );
+  pdpmlm_add( obj, 3, 3 );
   pdpmlm_Rdump( obj );
-/*
-  SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->r)); //a
-  SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->r)); //b
-  SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->r)); //m
-  SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->r)); //s
-  i = 0;
-  for(ind = 0; ind < obj->p; ind++) {
-    if( obj->inc[ind] > 0 ) {
-      SET_VECTOR_ELT(VECTOR_ELT(retval, 7), i, allocVector(REALSXP, obj->q));
-      SET_VECTOR_ELT(VECTOR_ELT(retval, 8), i, allocVector(REALSXP, obj->q*obj->q));
-      dim = allocVector(INTSXP, 2);
-      INTEGER(dim)[0] = obj->q;
-      INTEGER(dim)[1] = obj->q;
-      setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), i), R_DimSymbol, dim);
-      pdpmlm_parm(
-        obj,
-        ind,
+
+  SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a
+  SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->ncl)); //b
+  SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->ncl)); //m
+  SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->ncl)); //s
+  for( i = 0; i < obj->p; i++ ) { 
+    INTEGER(VECTOR_ELT(retval, 4))[i] = obj->vcl[ obj->vgr[ i ] ]; 
+  }
+  cls = 0;
+  for( i = 0; i < obj->ncl; i++) {
+    while( obj->pcl[ cls ] == 0 ) { cls++; }
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 8), i, allocVector(REALSXP, obj->q*obj->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 7), i, allocVector(REALSXP, obj->q));
+    dim = allocVector(INTSXP, 2);
+    INTEGER(dim)[0] = obj->q;
+    INTEGER(dim)[1] = obj->q;
+    setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), i), R_DimSymbol, dim);
+    pdpmlm_parm( obj, cls,
         REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), i)),
         REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), i)),
-        REAL(VECTOR_ELT(retval, 6))+i,
-        REAL(VECTOR_ELT(retval, 5))+i
-      );
-      i++;
-    }
+        REAL(VECTOR_ELT(retval, 5))+i,
+        REAL(VECTOR_ELT(retval, 6))+i
+    );
+    cls++;
   }
-*/
+
   UNPROTECT(4);
   return(retval);
 }

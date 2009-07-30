@@ -45,6 +45,13 @@ double       ** xxcl;   // x'x matrix (qxq) for each cluster
 double       ** xycl;   // x'y vector (qx1) for each cluster
 double        * yycl;   // y'y scalar for each cluster
 
+double        * s;      // storage for an s matrix (qxq)
+double        * m;      // storage for an m vector (qx1)
+double          a;      // storage for an a scalar
+double          b;      // storage for an b scalar
+
+double        * buf;    // temporary storage (qx1)
+
 } pdpmlm_t;
 
 
@@ -52,14 +59,17 @@ double        * yycl;   // y'y scalar for each cluster
 void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl );
 
 // Add an observation/group to a cluster new 
-void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int new );
+void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Remove an observation/group from cluster clt 
-void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int clt );
+void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Move an observation/group from its current cluster to cluster clt
-void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int clt );
- 
+void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int new );
+
+// Compute the posterior parameters s, m, a, and b for a given cluster
+void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
+
 // Compute the log posterior value for the model 
 double pdpmlm_logp( pdpmlm_t * obj );
 

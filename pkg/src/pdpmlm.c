@@ -77,8 +77,51 @@ void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int new ) {
   pdpmlm_add( obj, grp, new );
 }
 
+void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
+  unsigned int i, j, d, ione=1, inf, info;
+  double *x, *y, done=1.0, dzero=0.0;
+  if( obj->pcl[ cls ] == 0 ) { return; }
+
+  // 1. load s with s0I + x'x, load m with s0m0 + x'y
+  d = 0;
+  for( i = 0; i < obj->q; i++ ) {
+    m[ i ] = obj->s0 * obj->m0[ i ] + obj->xycl[ cls ][ i ];
+    for( j = 0; j < obj->q; j++ ) {
+      s[ i * obj->q + j ] = obj->xxcl[ cls ][ i * obj->q + j ];
+    }
+    s[ i * obj->q + (d++) ] += obj->s0;
+  }
+     
+  // 2. m = (s)^(-1) * m
+  // dgesv overwrites the matrix passed in. Hence, we must load s again
+  // when the call is finished. obj->buf holds some temporary data.
+  //  FIXME use dpbsv instead (for sym,pd matrices)
+  F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, obj->buf, m, &obj->q, &info);
+  if( info > 0 ) { error("dgesv: system is singular"); }
+  if( info < 0 ) { error("dgesv: invalid argument"); }
+
+  // 3. reload s
+  d = 0;
+  for( i = 0; i < obj->q; i++ ) {
+    for( j = 0; j < obj->q; j++ ) {
+      s[ i * obj->q + j ] = obj->xxcl[ cls ][ i * obj->q + j ];
+    }
+    s[ i * obj->q + (d++) ] += obj->s0;
+  }
+
+  // 4. b = y'y + s0*m0'm0 + m'sm
+  *b = obj->yycl[ cls ];
+  *b += obj->s0*F77_CALL(ddot)(&obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
+  F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &obj->q, &dzero, obj->buf, &obj->q );  // obj->buf = s*m
+  *b += F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b += m'obj->buf
+
+  // 5. a = a0 + nk;
+  *a = obj->a0 + obj->pcl[ cls ];
+}
+
+
 double pdpmlm_logp( pdpmlm_t * obj ) {
-  // 1. compute the log posterior value from s, m, a, and b
+  // 1. compute the log posterior value.
   return 0.0;
 }
 
