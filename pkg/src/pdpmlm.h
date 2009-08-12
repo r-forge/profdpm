@@ -3,6 +3,9 @@
 #include <Rmath.h>
 #include <R_ext/Memory.h>
 #include <R_ext/PrtUtil.h>
+#include <R_ext/BLAS.h>
+#include <R_ext/Lapack.h>
+#include "util.h"
 
 // The following should be changed if ported to another interface
 #define pdpmlm_alloc(count, size)  R_alloc(count, size)

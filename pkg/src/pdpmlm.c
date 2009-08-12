@@ -96,7 +96,7 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // dgesv overwrites the matrix passed in. Hence, we must load s again
   // when the call is finished. obj->buf holds some temporary data.
   //  FIXME use dpbsv instead (for sym,pd matrices)
-  F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, obj->buf, m, &obj->q, &info);
+  F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, (unsigned int *) obj->buf, m, &obj->q, &info);
   if( info > 0 ) { error("dgesv: system is singular"); }
   if( info < 0 ) { error("dgesv: invalid argument"); }
 
@@ -123,11 +123,15 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls;
   double logp = obj->alp * log( obj->ncl ) - lfactorial( obj->ncl );
+  printf( "1. logp = %f\n", logp );
   cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
+    printf( "%d. a = %f, b = %f\n", i+2, obj->a, obj->b );
+    printf( "logp += %f\n", lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 ) );
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
+    printf( "%d. logp = %f\n",i+2, logp );
     cls++;
   }
   return logp;

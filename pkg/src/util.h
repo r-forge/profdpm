@@ -1,4 +1,5 @@
 #include <math.h>
+#include <string.h>
 #include <Rinternals.h>
 
 /* log(sqrt(2*pi)) == log(2*pi)/2 */
