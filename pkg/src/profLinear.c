@@ -36,15 +36,11 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   SET_VECTOR_ELT(retval, 2, group);
   SET_VECTOR_ELT(retval, 3, parm);
   SET_VECTOR_ELT(retval, 4, clust);
+  debug("step 0 ok");
 
-  //1. Allocate memory for obj and pgr
+  //1. Allocate obj, make assignments, check priors
   obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
   if( obj == NULL ) { memerror(); }
-  obj->pgr = (unsigned int *) pdpmlm_alloc( obj->p, sizeof(unsigned int) );
-  if( obj->pgr == NULL ) { memerror(); }
-  debug("step 1 ok");
-
-  //2. Make assignments, check priors
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = INTEGER(group);
@@ -81,7 +77,13 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
     warning( "list item \"b0\" missing, using default value" );
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = *(REAL(elem)); }
+  debug("step 1 ok");
+
+  //2. Allocate memory for pgr
+  obj->pgr = (unsigned int *) pdpmlm_alloc( obj->p, sizeof(unsigned int) );
+  if( obj->pgr == NULL ) { memerror(); }
   debug("step 2 ok");
+
 
   //3. Compute pgr, ngr
   obj->ngr = 0;
@@ -163,8 +165,9 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   pdpmlm_add( obj, 1, 1 );
   pdpmlm_add( obj, 2, 2 );
   pdpmlm_add( obj, 3, 3 );
-  pdpmlm_Rdump( obj );
+
   pdpmlm_printf( "log posterior: %d\n", pdpmlm_logp( obj ) );
+  pdpmlm_Rdump( obj );  
 
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a
   SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->ncl)); //b
@@ -178,10 +181,11 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     SET_VECTOR_ELT(VECTOR_ELT(retval, 8), i, allocVector(REALSXP, obj->q*obj->q));
     SET_VECTOR_ELT(VECTOR_ELT(retval, 7), i, allocVector(REALSXP, obj->q));
-    dim = allocVector(INTSXP, 2);
+    PROTECT(dim = allocVector(INTSXP, 2));
     INTEGER(dim)[0] = obj->q;
     INTEGER(dim)[1] = obj->q;
     setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), i), R_DimSymbol, dim);
+
     pdpmlm_parm( obj, cls,
         REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), i)),
         REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), i)),
@@ -191,6 +195,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
     cls++;
   }
 
-  UNPROTECT(4);
+  UNPROTECT(4+obj->ncl);
   return(retval);
 }

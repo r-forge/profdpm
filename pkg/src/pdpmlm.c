@@ -70,11 +70,11 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
   }
 }
 
-void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int new ) {
+void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int old = obj->vcl[ grp ];
-  if( old == new ) { return; }
+  if( old == cls ) { return; }
   pdpmlm_sub( obj, grp, old );
-  pdpmlm_add( obj, grp, new );
+  pdpmlm_add( obj, grp, cls );
 }
 
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
@@ -127,7 +127,7 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-    logp += lgamma(obj->a/2) - obj->a/2*log(obj->b/2);
+    logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
     cls++;
   }
   return logp;
@@ -157,6 +157,14 @@ void pdpmlm_Rdump( pdpmlm_t * obj ) {
   printIntegerVector( &obj->p, 1, 1 );
   pdpmlm_printf("q\n");
   printIntegerVector( &obj->q, 1, 1 );
+  pdpmlm_printf("s\n");
+  printRealVector( obj->s, obj->q*obj->q, 1 );
+  pdpmlm_printf("m\n");
+  printRealVector( obj->m, obj->q, 1 );
+  pdpmlm_printf("a\n");
+  printRealVector( &obj->a, 1, 1 );
+  pdpmlm_printf("b\n");
+  printRealVector( &obj->b, 1, 1 );
   
   for(i = 0; i < obj->ngr; i++) {
     pdpmlm_printf( "group %u\n", i );
