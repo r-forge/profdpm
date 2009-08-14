@@ -23,8 +23,6 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
   obj->vcl[ grp ] = cls;
   if( obj->pcl[ cls ] == 0 ) { obj->ncl++; }
   obj->pcl[ cls ] += obj->pgr[ grp ];
-  Rprintf("step 1 ok\n");
-
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
     obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
@@ -39,8 +37,6 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
       }
     }
   }
-  Rprintf("step 2 ok\n");
-   
   // 3. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
   obj->yycl[ cls ] += obj->yygr[ grp ];
   for( i = 0; i < obj->q; i++ ) {
@@ -49,7 +45,6 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
       obj->xxcl[ cls ][ j + i * obj->q ] += obj->xxgr[ grp ][ j + i * obj->q ];
     }
   }
-  Rprintf("step 3 ok\n");
 }
 
 void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
@@ -121,20 +116,64 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
 
 double pdpmlm_logp( pdpmlm_t * obj ) {
-  unsigned int i, cls;
+  unsigned int i, cls = 0;
   double logp = obj->alp * log( obj->ncl ) - lfactorial( obj->ncl );
-  printf( "1. logp = %f\n", logp );
-  cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-    printf( "%d. a = %f, b = %f\n", i+2, obj->a, obj->b );
-    printf( "logp += %f\n", lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 ) );
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-    printf( "%d. logp = %f\n",i+2, logp );
     cls++;
   }
   return logp;
+}
+
+void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
+  unsigned int i, free = 1, tried = 0, test_cls = 0, best_cls;
+  double test_logp, best_logp;
+
+  best_logp = pdpmlm_logp( obj );
+  best_cls = obj->vcl[ grp ];
+
+  // If the current cluster is composed only of the group in question,
+  // then a free cluster need not be tried (tried == 1 indicates a free
+  // cluster has bee tried. free add to the total tried clusters )
+  if( obj->pcl[ best_cls ] == obj->pgr[ grp ] ) { tried = 1; free = 0; }
+
+  for( i = 0; i < obj->ncl + free; i++ ) {
+    while( test_cls == best_cls || ( obj->pcl[ test_cls ] == 0 && tried == 1 ) ) { test_cls++; }
+    if( obj->pcl[ test_cls ] == 0 ) { tried == 1; }
+    pdpmlm_move( obj, grp, test_cls );
+    test_logp = pdpmlm_logp( obj );
+    if( test_logp > best_logp ) { 
+      best_logp = test_logp;
+      best_cls  = test_cls;
+    }
+    test_cls++;
+  }
+
+  if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
+}
+    
+
+void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
+  unsigned int *vcl_old, *grps, ngrps, iter = 0;
+  double lpost_old;
+
+  // 0. select number of groups to be shuffled (%20 of total)
+  ngrps = obj->ngr / 5;
+  ngrps = ngrps == 0 ? 1 : ngrps;
+
+  // 1. compute old logp, allocate memory for vcl_old, grps
+  lpost_old = pdpmlm_lpost( obj ); 
+  vcl_old = pdpmlm_alloc( ngrps, sizeof( unsigned int ) );
+  grps    = pdpmlm_alloc( ngrps, sizeof( unsigned int ) );
+
+  while( iter++ < itermax ) {
+  // 2. randomly select ngrps groups to shuffle, save indicators
+  // 3. move groups to same cluster
+  // 4. move each group to best cluster
+  // 5. compute logp, keep new clustering if better, else revert to old
+  }
 }
 
 

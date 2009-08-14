@@ -166,8 +166,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   pdpmlm_add( obj, 2, 2 );
   pdpmlm_add( obj, 3, 3 );
 
-  pdpmlm_printf( "log posterior: %d\n", pdpmlm_logp( obj ) );
-  pdpmlm_Rdump( obj );  
+  pdpmlm_printf( "log posterior: %f\n", pdpmlm_logp( obj ) );
+  pdpmlm_best( obj, 0 );
 
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a
   SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->ncl)); //b

@@ -27,10 +27,20 @@ double        * m0;   // prior m0 parameter
 double          a0;   // prior a0 parameter
 double          b0;   // prior b0 parameter
 
+// Each of the p entries in y has a corresponding entry in vgr
+// that indicates group membership. The values in vgr are begin
+// at zero and are increasing. The largest value is ngr-1.
+// Hence, y and x are sorted before being passed to the C code.
 unsigned int  * vgr;  // group vector {0,0,...,ngr-1,ngr-1}
 unsigned int  * pgr;  // number in each group (ngr)
 unsigned int    ngr;  // number of groups
 
+// Each of the ngr groups has an entry in vcl indicating
+// group membership. The group indicator is used to index
+// the values in vcl. Hence, 'vcl[ 0 ]' would yield the 
+// cluster indicator for group 0. The values in vcl may 
+// range from 0 to ncl-1, but must be less than or equal to
+// ngr-1. These values may not be ordered.
 unsigned int  * vcl;  // cluster vector {0,...,ncl-1} 
 unsigned int  * pcl;  // number in each cluster (ngr)
 unsigned int    ncl;  // number of clusters
@@ -69,6 +79,9 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Move an observation/group from its current cluster to cluster clt
 void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
+
+// Move an observation/group to the cluster that minimizes the logp
+void pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
 
 // Compute the posterior parameters s, m, a, and b for a given cluster
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
