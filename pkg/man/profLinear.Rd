@@ -30,8 +30,8 @@ y0 <- x0[,1] + rnorm(50, 0, 1)
 y1 <- 10 - x1[,1] + rnorm(50, 1, 1)
 x  <- rbind(x0, x1)
 y  <- c(y0, y1)
-g  <- rep(seq(0,3),25)
-p  <- list(alpha=0.001,a0=0.001,b0=0.001,m0=0,s0=1)
+g  <- c( rep(seq(0,4),10), rep(seq(5,9),10) )
+p  <- list(alpha=0.001,a0=0.001,b0=0.001,m0=c(0,0),s0=1)
 fit<- profLinear(y, x, g, p)
 }
 \author{Matt Shotwell}

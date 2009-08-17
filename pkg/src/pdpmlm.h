@@ -1,3 +1,6 @@
+#ifndef PDPMLM_H
+#define PDPMLM_H
+
 #include <R.h>
 #include <Rinternals.h>
 #include <Rmath.h>
@@ -67,28 +70,36 @@ double        * buf;    // temporary storage (qx1)
 
 } pdpmlm_t;
 
+void memerror(); 
 
 // Assign the observations/groups in sequence among ncl groups
-void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl );
+void         pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl );
 
 // Add an observation/group to a cluster new 
-void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
+void         pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Remove an observation/group from cluster clt 
-void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
+void         pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Move an observation/group from its current cluster to cluster clt
-void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
+void         pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
+
+// Get the index of an free (empty) cluster of BAD_CLS if none exist
+unsigned int pdpmlm_free( pdpmlm_t * obj );
 
 // Move an observation/group to the cluster that minimizes the logp
-void pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
+void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
 
 // Compute the posterior parameters s, m, a, and b for a given cluster
-void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
+void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
 
 // Compute the log posterior value for the model 
-double pdpmlm_logp( pdpmlm_t * obj );
+double       pdpmlm_logp( pdpmlm_t * obj );
+
+// Perform chunk style optimization
+void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax);
 
 // (Note: This function is R specific) This function prints a 
 // representation of the pdpmlm_t to the R terminal
-void pdpmlm_Rdump( pdpmlm_t * obj );
+void         pdpmlm_Rdump( pdpmlm_t * obj );
+#endif

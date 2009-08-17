@@ -4,8 +4,6 @@
 #include "util.h"
 #include "pdpmlm.h"
 
-void debug( char * msg ) { Rprintf("debug: %s\n", msg); }
-void memerror() { error("failed to allocate memory"); }
 
 SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   SEXP retval, elem, names, class, clust, dim;
@@ -36,7 +34,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   SET_VECTOR_ELT(retval, 2, group);
   SET_VECTOR_ELT(retval, 3, parm);
   SET_VECTOR_ELT(retval, 4, clust);
-  debug("step 0 ok");
+  pdpmlm_printf("step 0 ok\n");
 
   //1. Allocate obj, make assignments, check priors
   obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
@@ -77,12 +75,12 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
     warning( "list item \"b0\" missing, using default value" );
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = *(REAL(elem)); }
-  debug("step 1 ok");
+  pdpmlm_printf("step 1 ok\n");
 
   //2. Allocate memory for pgr
   obj->pgr = (unsigned int *) pdpmlm_alloc( obj->p, sizeof(unsigned int) );
   if( obj->pgr == NULL ) { memerror(); }
-  debug("step 2 ok");
+  pdpmlm_printf("step 2 ok\n");
 
 
   //3. Compute pgr, ngr
@@ -90,7 +88,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ i ] = 0; }
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
   for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
-  debug("step 3 ok");
+  pdpmlm_printf("step 3 ok\n");
  
   //4. Allocate and zero memory vcl, pcl, ncl
   obj->ncl = 0;
@@ -101,7 +99,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
     obj->vcl[ i ] = BAD_CLS;
     obj->pcl[ i ] = 0; 
   }
-  debug("step 4 ok");
+  pdpmlm_printf("step 4 ok\n");
 
   //5. Allocate and zero memory for xxgr xygr, and yygr
   obj->xxgr = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
@@ -123,7 +121,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
       }
     }
   }
-  debug("step 5 ok");
+  pdpmlm_printf("step 5 ok\n");
   
   //6. Compute xxgr, xygr, yygr
   for( i = 0; i < obj->p; i++ ) {
@@ -136,7 +134,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
        F77_CALL(daxpy)(&obj->q, yp, xp, &onei, obj->xygr[ obj->vgr[ i ] ], &onei); 
        obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
   }
-  debug("step 6 ok");
+  pdpmlm_printf("step 6 ok\n");
 
   //7. allocate and zero xxcl, xycl, yycl
   obj->xxcl = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
@@ -150,7 +148,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
     obj->xycl[ i ] = NULL;
     obj->yycl[ i ] = 0.0;
   }
-  debug("step 7 ok");
+  pdpmlm_printf("step 7 ok\n");
 
   //8. allocate s, m, and buf
   obj->s = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
@@ -159,15 +157,17 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   if( obj->m == NULL ) { memerror(); }
   obj->buf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
   if( obj->buf == NULL ) { memerror(); }
-  debug("step 8 ok");
+  pdpmlm_printf("step 8 ok\n");
 
-  pdpmlm_add( obj, 0, 0 );
-  pdpmlm_add( obj, 1, 1 );
-  pdpmlm_add( obj, 2, 2 );
-  pdpmlm_add( obj, 3, 3 );
+  pdpmlm_divy( obj, 3 );
+  //pdpmlm_printf( "before move: %f\n", pdpmlm_logp( obj ) );
+  //pdpmlm_move( obj, 1, 0 );
+  //pdpmlm_printf( "after move: %f\n", pdpmlm_logp( obj ) );
+  //pdpmlm_move( obj, 1, 1 );
+  //pdpmlm_move( obj, 0, 4 );
+  pdpmlm_chunk( obj, 10 );
+  pdpmlm_printf( "after move back: %f\n", pdpmlm_logp( obj ) );
 
-  pdpmlm_printf( "log posterior: %f\n", pdpmlm_logp( obj ) );
-  pdpmlm_best( obj, 0 );
 
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a
   SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->ncl)); //b
