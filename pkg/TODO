@@ -1,3 +1,17 @@
-1. allow additional arguments to be passed to profileDensity
-2. provide additional methods for optimization
-3. add linear models functionality
+profDensity:
+0. possibly remove this public function and keep code for reference, as it generally does not perform well and profLinear duplicates the functionality.
+
+profLinear:
+0. check log posterior computation
+1. provide stopping criterion functionality
+2. remove missing observations before C call (issue warning)
+3. add a summary method for profLinear
+4. add a plot method for profLinear
+5. modify code and add functions for interfacing with C functions
+6. build better example code
+7. write a script for testing and benchmarking (Hamming dist.)
+8. revise help files
+9. consider adding 'verbose' option to public function for debugging info
+
+
+

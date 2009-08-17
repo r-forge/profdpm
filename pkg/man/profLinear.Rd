@@ -11,7 +11,7 @@
   \item{y}{a numeric vector observations}
   \item{x}{a numeric matrix of covariates}
   \item{group}{an optional vector of integers indicating grouping among observations}
-  \item{parm}{a list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma dirichlet process mixture (See Details)}
+  \item{parm}{a list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture.}
   \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm}
   \item{crit}{an numeric value specifying the minimum proportional gain in the log posterior relative to  the cumulative gain over all previous iterations. This value constitutes a 'stopping criterion' for the optimization algorithm.}
 }
@@ -19,7 +19,9 @@
   An instance of the class profLinear
 }
 \details{
-This function will fit a Dirichlet process mixture of linear models using the profile method. The function does nothing at the moment and simply returns the an empty instance of the profLinear class.
+This function fits a Dirichlet process mixture of linear models using the profile method.
+
+The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in x.
 }
 
 \examples{
@@ -32,6 +34,6 @@ x  <- cbind(rep(1,100), rbind(x0, x1))
 y  <- c(y0, y1)
 g  <- c( rep(seq(0,4),10), rep(seq(5,9),10) )
 p  <- list(alpha=0.001,a0=0.001,b0=0.001,m0=c(0,0,0),s0=1)
-fit<- profLinear(y, x, g, p, iter=10)
+fit<- profLinear(y, x, g, p, iter=100)
 }
 \author{Matt Shotwell}
