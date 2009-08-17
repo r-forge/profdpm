@@ -28,10 +28,10 @@ x0 <- matrix(rnorm(100, 0, 3), 50, 2)
 x1 <- matrix(rnorm(100, 0, 3), 50, 2)
 y0 <- x0[,1] + rnorm(50, 0, 1)
 y1 <- 10 - x1[,1] + rnorm(50, 1, 1)
-x  <- rbind(x0, x1)
+x  <- cbind(rep(1,100), rbind(x0, x1))
 y  <- c(y0, y1)
 g  <- c( rep(seq(0,4),10), rep(seq(5,9),10) )
-p  <- list(alpha=0.001,a0=0.001,b0=0.001,m0=c(0,0),s0=1)
-fit<- profLinear(y, x, g, p)
+p  <- list(alpha=0.001,a0=0.001,b0=0.001,m0=c(0,0,0),s0=1)
+fit<- profLinear(y, x, g, p, iter=10)
 }
 \author{Matt Shotwell}
