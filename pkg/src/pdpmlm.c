@@ -1,5 +1,6 @@
 #include "pdpmlm.h"
 
+
 void memerror() { error("failed to allocate memory"); }
 
 void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
@@ -9,9 +10,12 @@ void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
   }
 }
 
-void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
+void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int i, j;
-
+ 
+  if( grp >= obj->ngr ) { pdpmlm_printf("grp: %u\n", grp); error( "pdpmlm_add: invalid argument" ); }
+  if( cls >= obj->ngr ) { pdpmlm_printf("cls: %u\n", cls); error( "pdpmlm_add: invalid argument" ); }
+ 
   // 1. set vcl, recompute pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
   if( obj->pcl[ cls ] == 0 ) { obj->ncl++; }
@@ -45,6 +49,8 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
   unsigned int i, j;
 
+  if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_sub: invalid argument" ); } 
+
   // 1. set vcl, recompute pcl, and possibly ncl
   obj->vcl[ grp ] = BAD_CLS; // comment this out after debug
   obj->pcl[ cls ] -= obj->pgr[ grp ];
@@ -70,7 +76,10 @@ void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
   unsigned int i, j, d, ione=1, inf, info;
   double *x, *y, done=1.0, dzero=0.0;
+
   if( obj->pcl[ cls ] == 0 ) { return; }
+
+  if( cls >= obj->ngr ) { error( "pdpmlm_parm: invalid argument" ); }
 
   // 1. load s with s0I + x'x, load m with s0m0 + x'y
   d = 0;
@@ -112,11 +121,12 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls = 0;
-  double logp = obj->alp * log( obj->ncl ) - lfactorial( obj->ncl );
+  double logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
+  //  logp += lfactorial( obj->pcl[ cls ] - 1 );
     cls++;
   }
   return logp;
@@ -130,20 +140,28 @@ unsigned int pdpmlm_free( pdpmlm_t * obj ) {
 }
 
 void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
-  unsigned int i, free = 1, tried = 0, test_cls = 0, best_cls;
+  unsigned int i, test_cls, best_cls;
   double test_logp, best_logp;
+
+  if( grp >= obj->ngr ) { error( "pdpmlm_best: invalid argument" ); }
 
   best_logp = pdpmlm_logp( obj );
   best_cls = obj->vcl[ grp ];
 
-  // If the current cluster is composed only of the group in question,
-  // then a free cluster need not be tried (tried == 1 indicates a free
-  // cluster has bee tried. free adds to the total tried clusters )
-  if( obj->pcl[ best_cls ] == obj->pgr[ grp ] ) { tried = 1; free = 0; }
+  if( obj->pcl[ best_cls ] > obj->pgr[ grp ] ) {
+    test_cls = pdpmlm_free( obj );
+    if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
+    pdpmlm_move( obj, grp, test_cls );
+    test_logp = pdpmlm_logp( obj );
+    if( test_logp > best_logp ) { 
+      best_logp = test_logp;
+      best_cls  = test_cls;
+    }
+  }
 
-  for( i = 0; i < obj->ncl + free; i++ ) {
-    while( test_cls == best_cls || ( obj->pcl[ test_cls ] == 0 && tried == 1 ) ) { test_cls++; }
-    if( obj->pcl[ test_cls ] == 0 ) { tried == 1; }
+  test_cls = 0;
+  for( i = 0; i < obj->ncl; i++ ) {
+    while( obj->pcl[ test_cls ] == 0 ) { test_cls++; }
     pdpmlm_move( obj, grp, test_cls );
     test_logp = pdpmlm_logp( obj );
     if( test_logp > best_logp ) { 
@@ -160,7 +178,6 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
   double logp_old, logp;
-
   // 0. select number of groups to be shuffled (%20 of total)
   ngrps = obj->ngr / 5;
   ngrps = ngrps == 0 ? 1 : ngrps;
@@ -176,7 +193,7 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     // 2. randomly select ngrps groups to shuffle, save indicators
     GetRNGstate();
     for( i = 0; i < ngrps; i++ ) {
-      grps[ i ] = (unsigned int) ( obj->ngr * runif( 0.0, 1.0 ) );
+      grps[ i ] = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
       vcl_old[ i ] = obj->vcl[ grps[ i ] ];
     }
   
@@ -184,7 +201,7 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     logp_old = pdpmlm_logp( obj ); 
     //cls = pdpmlm_free( obj );
     //if( cls == BAD_CLS ) { cls = obj->vcl[ grps[ 0 ] ]; }
-    cls = (unsigned int) ( obj->ngr * runif( 0.0, 1.0 ) );
+    cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
     for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
     PutRNGstate();
          
@@ -196,7 +213,7 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     if( logp < logp_old ) { 
       for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
     }
-
+    //pdpmlm_printf("iter: %u, ncl: %u, logp: %f\n", iter, obj->ncl, pdpmlm_logp( obj ) );
   }
 }
 
