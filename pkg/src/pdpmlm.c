@@ -139,6 +139,37 @@ unsigned int pdpmlm_free( pdpmlm_t * obj ) {
   return cls;
 }
 
+void pdpmlm_away( pdpmlm_t * obj, unsigned int grp ) {
+  unsigned int i, test_cls, old_cls, best_cls;
+  double test_logp, best_logp = DBL_MIN;
+
+  old_cls = obj->vcl[ grp ];
+
+  if( grp >= obj->ngr ) { error( "pdpmlm_away: invalid argument" ); }
+
+  if( obj->pcl[ best_cls ] > obj->pgr[ grp ] ) {
+    best_cls = pdpmlm_free( obj );
+    if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
+    pdpmlm_move( obj, grp, best_cls );
+    best_logp = pdpmlm_logp( obj );
+  }
+
+  test_cls = 0;
+  for( i = 0; i < obj->ncl; i++ ) {
+    while( obj->pcl[ test_cls ] == 0 ) { test_cls++; }
+    pdpmlm_move( obj, grp, test_cls );
+    test_logp = pdpmlm_logp( obj );
+    if( test_logp > best_logp && test_cls != old_cls) { 
+      best_logp = test_logp;
+      best_cls  = test_cls;
+    }
+    test_cls++;
+  }
+
+  if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
+}
+  
+
 void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   unsigned int i, test_cls, best_cls;
   double test_logp, best_logp;
@@ -177,21 +208,27 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 
 void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
-  double logp_old, logp;
-  // 0. select number of groups to be shuffled (%50 of total)
-  ngrps = obj->ngr / 2;
-  ngrps = ngrps == 0 ? 1 : ngrps;
+  double logp_old, logp, temp, tdel;
 
-  // 1. allocate memory for vcl_old, grps
-  vcl_old = (unsigned int *) pdpmlm_alloc( ngrps, sizeof( unsigned int ) );
+  // 0. allocate memory for vcl_old, grps
+  vcl_old = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
   if( vcl_old == NULL ) { memerror(); }
-  grps    = (unsigned int *) pdpmlm_alloc( ngrps, sizeof( unsigned int ) );
+  grps    = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
   if( grps == NULL ) { memerror(); }
 
+  tdel = itermax / 20.0;
+  tdel = tdel > 0.0 ? tdel : 1.0;
+
+  GetRNGstate();
   while( iter++ < itermax ) {
- 
+
+    temp = exp( -1* (iter / tdel) );
+
+    // 1. randomly select the number of groups to shuffle
+    ngrps = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) ); 
+    ngrps = ngrps == 0 ? 1 : ngrps;
+
     // 2. randomly select ngrps groups to shuffle, save indicators
-    GetRNGstate();
     for( i = 0; i < ngrps; i++ ) {
       grps[ i ] = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
       vcl_old[ i ] = obj->vcl[ grps[ i ] ];
@@ -201,20 +238,24 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     logp_old = pdpmlm_logp( obj ); 
     //cls = pdpmlm_free( obj );
     //if( cls == BAD_CLS ) { cls = obj->vcl[ grps[ 0 ] ]; }
-    cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
-    for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
-    PutRNGstate();
+    //cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
+    //for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
+    for( i = 0; i < ngrps; i++ ) { pdpmlm_away( obj, grps[ i ] ); }
          
     // 4. move each group to best cluster
     for( i = 0; i < ngrps; i++ ) { pdpmlm_best( obj, grps[ i ] ); }
 
     // 5. compute logp, keep new clustering if better, else revert to old
     logp = pdpmlm_logp( obj );
-    if( logp < logp_old ) { 
-      for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
+    if( logp < logp_old ) {    
+      if( temp > runif( 0.0, 1.0 ) ) {
+        pdpmlm_printf("revert\n");
+        for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
+      }
     }
-    //pdpmlm_printf("iter: %u, ncl: %u, logp: %f\n", iter, obj->ncl, pdpmlm_logp( obj ) );
+    pdpmlm_printf("iter: %u, ncl: %u, ngrps: %u, logp_old: %f, logp: %f, temp: %f tdel: %f\n", iter, obj->ncl, ngrps, logp_old, logp, temp, tdel );
   }
+    PutRNGstate();
 }
 
 

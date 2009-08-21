@@ -150,7 +150,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   obj->buf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
   if( obj->buf == NULL ) { memerror(); }
 
-  pdpmlm_divy( obj, 3 );
+  pdpmlm_divy( obj, obj->ngr );
+  pdpmlm_Rdump( obj );
   pdpmlm_chunk( obj, *INTEGER(iter) );
 
 
