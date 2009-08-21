@@ -178,8 +178,8 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
   double logp_old, logp;
-  // 0. select number of groups to be shuffled (%20 of total)
-  ngrps = obj->ngr / 5;
+  // 0. select number of groups to be shuffled (%50 of total)
+  ngrps = obj->ngr / 2;
   ngrps = ngrps == 0 ? 1 : ngrps;
 
   // 1. allocate memory for vcl_old, grps
