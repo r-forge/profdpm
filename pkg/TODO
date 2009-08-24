@@ -1,6 +1,3 @@
-profDensity:
-0. possibly remove this public function and keep code for reference, as it generally does not perform well and profLinear duplicates the functionality.
-
 profLinear:
 1. provide stopping criterion functionality
 2. add a summary method for profLinear
