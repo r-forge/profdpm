@@ -5,7 +5,7 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEXP verb) {
   SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
   unsigned int i, j, k, cls, onei=1;
@@ -38,6 +38,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   //1. Allocate obj, make assignments, check priors
   obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
   if( obj == NULL ) { memerror(); }
+  obj->opt   = 0;
+  if( LOGICAL(verb)[0] ) { obj->opt |= OPTION_VERBOSE; }
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = INTEGER(group);
@@ -150,9 +152,11 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit) {
   obj->buf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
   if( obj->buf == NULL ) { memerror(); }
 
+  if( obj->opt & OPTION_VERBOSE ) { pdpmlm_printf( "memory allocated\n" ); }
   pdpmlm_divy( obj, obj->ngr );
-  pdpmlm_Rdump( obj );
+  if( obj->opt & OPTION_VERBOSE ) { pdpmlm_printf( "model initialized\n" ); }
   pdpmlm_chunk( obj, *INTEGER(iter) );
+  if( obj->opt & OPTION_VERBOSE ) { pdpmlm_printf( "optimization complete\n" ); }
 
 
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a

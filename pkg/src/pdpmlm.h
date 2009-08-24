@@ -22,7 +22,20 @@
 
 #define BAD_CLS INT_MAX
 
+// bit masks for options
+#define OPTION_VERBOSE  1<<0
+#define OPTION_EMPTY_1  1<<1
+#define OPTION_EMPTY_2  1<<2
+#define OPTION_EMPTY_3  1<<3
+#define OPTION_EMPTY_4  1<<4
+#define OPTION_EMPTY_5  1<<5
+#define OPTION_EMPTY_6  1<<6
+#define OPTION_EMPTY_7  1<<7
+
+
 typedef struct {
+
+unsigned char   opt;  // some options
 
 double          alp;  // prior alpha parameter
 double          s0;   // prior s0 parameter
@@ -75,6 +88,9 @@ void memerror();
 // Assign the observations/groups in sequence among ncl groups
 void         pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl );
 
+// Assign the observations/groups according to a smart algorithm
+void         pdpmlm_init( pdpmlm_t * obj );
+
 // Add an observation/group to a cluster new 
 void         pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
@@ -89,6 +105,9 @@ unsigned int pdpmlm_free( pdpmlm_t * obj );
 
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
+
+// Move an observation/group to the cluster that minimizes the logp, excluding the current cluster
+void         pdpmlm_away( pdpmlm_t * obj, unsigned int grp );
 
 // Compute the posterior parameters s, m, a, and b for a given cluster
 void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );

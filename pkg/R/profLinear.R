@@ -1,4 +1,4 @@
-profLinear <- function(y, x, group, parm, iter=1000, crit=0.001) {
+profLinear <- function(y, x, group, parm, iter=1000, crit=0.001, verb=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { stop("y must be numeric") }
@@ -8,11 +8,21 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=0.001) {
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
 
   ###################################################
+  #remove missing observations, issue warning
+  miss <- apply( is.na( cbind( y, x ) ), 1, any ) 
+  ry <- y[!miss]
+  rx <- x[!miss,]
+  rg <- group[!miss]
+  if( any( miss ) ) {
+    warning( "removed observations with missing values: ", (1:length(y))[miss] )
+  }
+
+  ###################################################
   #order the data according to group
   #convert ordered y to double
-  group <- as.factor(group)
-  ord <- order(group)
-  ry <- as.double(y[ord])
+  rg <- as.factor(rg)
+  ord <- order(rg)
+  ry <- as.double(ry[ord])
 
   ###################################################
   #transpose ordered x to simplify BLAS/LAPACK calls
@@ -21,11 +31,11 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=0.001) {
 
   ###################################################
   #convert ordered group to integers from 0,1,...
-  rg <- as.integer(unclass(group[ord])-1)
+  rg <- as.integer(unclass(rg[ord])-1)
  
   ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, as.list(parm), as.integer(iter), as.numeric(crit), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, as.list(parm), as.integer(iter), as.numeric(crit), as.logical(verb), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering
@@ -34,6 +44,8 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=0.001) {
   ret$x[ord,] <- ret$x
   ret$group[ord] <- ret$group
   ret$clust[ord] <- ret$clust
+  ret$clust <- unclass(as.factor(ret$clust))
+  attributes(ret$clust) <- NULL
   return(ret)  
 }
 

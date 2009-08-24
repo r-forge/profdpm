@@ -5,7 +5,7 @@
   This function performs inference in a Dirichlet process mixture of linear models using the profile method.
 }
 \usage{
-  profLinear(y, x, group, parm, iter = 1000, crit = 0.001)
+  profLinear(y, x, group, parm, iter = 1000, crit = 0.001, verb=FALSE)
 }
 \arguments{
   \item{y}{a numeric vector observations}
@@ -14,6 +14,7 @@
   \item{parm}{a list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture.}
   \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm}
   \item{crit}{an numeric value specifying the minimum proportional gain in the log posterior relative to  the cumulative gain over all previous iterations. This value constitutes a 'stopping criterion' for the optimization algorithm.}
+  \item{verb}{a logical value indicating whether the routine should be verbose in printing}
 }
 \value{
   An instance of the class profLinear

@@ -8,6 +8,17 @@ void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
   for( i = 0; i < obj->ngr; i++ ) { 
     pdpmlm_add( obj, i, i % ncl );
   }
+  if( obj->opt & OPTION_VERBOSE ) {
+    pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
+  }
+}
+
+void pdpmlm_init( pdpmlm_t * obj ) {
+  unsigned int grp;
+  pdpmlm_add( obj, 0, 0 );
+  for( grp = 1; grp < obj->ngr; grp++ ) {
+    
+  }
 }
 
 void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
@@ -108,11 +119,11 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
     s[ i * obj->q + (d++) ] += obj->s0;
   }
 
-  // 4. b = y'y + s0*m0'm0 + m'sm
+  // 4. b = y'y + s0*m0'm0 - m'sm
   *b = obj->yycl[ cls ];
   *b += obj->s0*F77_CALL(ddot)(&obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
   F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &ione, &dzero, obj->buf, &ione );  // obj->buf = s*m
-  *b += F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b += m'obj->buf
+  *b -= F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b -= m'obj->buf
 
   // 5. a = a0 + nk;
   *a = obj->a0 + obj->pcl[ cls ];
@@ -126,7 +137,7 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-  //  logp += lfactorial( obj->pcl[ cls ] - 1 );
+    logp += lfactorial( obj->pcl[ cls ] - 1 );
     cls++;
   }
   return logp;
@@ -207,8 +218,8 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
     
 
 void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
-  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
-  double logp_old, logp, temp, tdel;
+  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, rev = 0;
+  double logp_old, logp, temp, tdel, unif;
 
   // 0. allocate memory for vcl_old, grps
   vcl_old = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
@@ -224,8 +235,9 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
 
     temp = exp( -1* (iter / tdel) );
 
-    // 1. randomly select the number of groups to shuffle
-    ngrps = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) ); 
+    // 1. select the number of groups to shuffle
+    //ngrps = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) ); 
+    ngrps = obj->ngr / 2;
     ngrps = ngrps == 0 ? 1 : ngrps;
 
     // 2. randomly select ngrps groups to shuffle, save indicators
@@ -238,9 +250,9 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     logp_old = pdpmlm_logp( obj ); 
     //cls = pdpmlm_free( obj );
     //if( cls == BAD_CLS ) { cls = obj->vcl[ grps[ 0 ] ]; }
-    //cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
-    //for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
-    for( i = 0; i < ngrps; i++ ) { pdpmlm_away( obj, grps[ i ] ); }
+    cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
+    for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
+    //for( i = 0; i < ngrps; i++ ) { pdpmlm_away( obj, grps[ i ] ); }
          
     // 4. move each group to best cluster
     for( i = 0; i < ngrps; i++ ) { pdpmlm_best( obj, grps[ i ] ); }
@@ -248,12 +260,15 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     // 5. compute logp, keep new clustering if better, else revert to old
     logp = pdpmlm_logp( obj );
     if( logp < logp_old ) {    
-      if( temp > runif( 0.0, 1.0 ) ) {
-        pdpmlm_printf("revert\n");
+      unif = runif( 0.0, 1.0 ); 
+      if( temp < unif ) {
         for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
+        rev = 1;
       }
     }
-    pdpmlm_printf("iter: %u, ncl: %u, ngrps: %u, logp_old: %f, logp: %f, temp: %f tdel: %f\n", iter, obj->ncl, ngrps, logp_old, logp, temp, tdel );
+    if( obj->opt & OPTION_VERBOSE && (iter % 20) == 0 ) {
+      pdpmlm_printf("iter: %u, ncl: %u, logp: %f\n", iter, obj->ncl, rev ? logp_old : logp );
+    }
   }
     PutRNGstate();
 }
