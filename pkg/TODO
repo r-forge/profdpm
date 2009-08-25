@@ -4,5 +4,4 @@ profLinear:
 3. modify code and add functions for interfacing with C functions
 4. build better example code
 5. write a script for testing and benchmarking (Hamming dist.)
-6. revise documentation files
-7. clean up source code
+6. clean up source code
