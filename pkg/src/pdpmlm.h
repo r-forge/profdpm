@@ -22,20 +22,20 @@
 
 #define BAD_CLS INT_MAX
 
-// bit masks for options
-#define OPTION_VERBOSE  1<<0
-#define OPTION_EMPTY_1  1<<1
-#define OPTION_EMPTY_2  1<<2
-#define OPTION_EMPTY_3  1<<3
-#define OPTION_EMPTY_4  1<<4
-#define OPTION_EMPTY_5  1<<5
-#define OPTION_EMPTY_6  1<<6
-#define OPTION_EMPTY_7  1<<7
+// bit masks for flags
+#define FLAG_VERBOSE  1<<0  // should routine be verbose
+#define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
+#define FLAG_EMPTY_2  1<<2
+#define FLAG_EMPTY_3  1<<3
+#define FLAG_EMPTY_4  1<<4
+#define FLAG_EMPTY_5  1<<5
+#define FLAG_EMPTY_6  1<<6
+#define FLAG_EMPTY_7  1<<7
 
 
 typedef struct {
 
-unsigned char   opt;  // some options
+unsigned char   flags;  // some options
 
 double          alp;  // prior alpha parameter
 double          s0;   // prior s0 parameter
@@ -116,7 +116,7 @@ void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double *
 double       pdpmlm_logp( pdpmlm_t * obj );
 
 // Perform chunk style optimization
-void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax);
+void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit);
 
 // (Note: This function is R specific) This function prints a 
 // representation of the pdpmlm_t to the R terminal

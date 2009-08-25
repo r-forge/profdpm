@@ -38,8 +38,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
   //1. Allocate obj, make assignments, check priors
   obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
   if( obj == NULL ) { memerror(); }
-  obj->opt   = 0;
-  if( LOGICAL(verb)[0] ) { obj->opt |= OPTION_VERBOSE; }
+  obj->flags   = 0;
+  if( LOGICAL(verb)[0] ) { obj->flags |= FLAG_VERBOSE; }
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = INTEGER(group);
@@ -152,11 +152,12 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
   obj->buf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
   if( obj->buf == NULL ) { memerror(); }
 
-  if( obj->opt & OPTION_VERBOSE ) { pdpmlm_printf( "memory allocated\n" ); }
+  //9. distribute the clusters initially and perform optimization
+  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf( "memory allocated\n" ); }
   pdpmlm_divy( obj, obj->ngr );
-  if( obj->opt & OPTION_VERBOSE ) { pdpmlm_printf( "model initialized\n" ); }
-  pdpmlm_chunk( obj, *INTEGER(iter) );
-  if( obj->opt & OPTION_VERBOSE ) { pdpmlm_printf( "optimization complete\n" ); }
+  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf( "model initialized\n" ); }
+  pdpmlm_chunk( obj, INTEGER(iter)[0], REAL(crit)[0] );
+  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf( "optimization complete\n" ); }
 
 
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a

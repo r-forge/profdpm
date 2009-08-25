@@ -1,6 +1,5 @@
 #include "pdpmlm.h"
 
-
 void memerror() { error("failed to allocate memory"); }
 
 void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
@@ -8,7 +7,7 @@ void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
   for( i = 0; i < obj->ngr; i++ ) { 
     pdpmlm_add( obj, i, i % ncl );
   }
-  if( obj->opt & OPTION_VERBOSE ) {
+  if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
   }
 }
@@ -217,9 +216,9 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 }
     
 
-void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
-  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, rev = 0;
-  double logp_old, logp, temp, tdel, unif;
+void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
+  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
+  double logp_old, logp, pdel = 1, pcum = 0;
 
   // 0. allocate memory for vcl_old, grps
   vcl_old = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
@@ -227,17 +226,11 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
   grps    = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
   if( grps == NULL ) { memerror(); }
 
-  tdel = itermax / 20.0;
-  tdel = tdel > 0.0 ? tdel : 1.0;
-
   GetRNGstate();
   while( iter++ < itermax ) {
 
-    temp = exp( -1* (iter / tdel) );
-
     // 1. select the number of groups to shuffle
-    //ngrps = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) ); 
-    ngrps = obj->ngr / 2;
+    ngrps = obj->ngr / 3;
     ngrps = ngrps == 0 ? 1 : ngrps;
 
     // 2. randomly select ngrps groups to shuffle, save indicators
@@ -246,13 +239,12 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
       vcl_old[ i ] = obj->vcl[ grps[ i ] ];
     }
   
-    // 3. compute old logp, move groups to same/new cluster
+    // 3. compute old logp, move groups to same/random cluster
     logp_old = pdpmlm_logp( obj ); 
     //cls = pdpmlm_free( obj );
     //if( cls == BAD_CLS ) { cls = obj->vcl[ grps[ 0 ] ]; }
     cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
     for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
-    //for( i = 0; i < ngrps; i++ ) { pdpmlm_away( obj, grps[ i ] ); }
          
     // 4. move each group to best cluster
     for( i = 0; i < ngrps; i++ ) { pdpmlm_best( obj, grps[ i ] ); }
@@ -260,43 +252,59 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax) {
     // 5. compute logp, keep new clustering if better, else revert to old
     logp = pdpmlm_logp( obj );
     if( logp < logp_old ) {    
-      unif = runif( 0.0, 1.0 ); 
-      if( temp < unif ) {
         for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
-        rev = 1;
+    }
+    
+    // 6. update the stopping criterion
+    else{ 
+      pdel = 0.8 * (logp - logp_old) + 0.2 * pdel;
+      pcum += pdel; 
+      logp_old = logp;
+    }
+
+    // 7. print summary if requested every 20 iterations
+    if( obj->flags & FLAG_VERBOSE && (iter % 20) == 0 ) {
+      pdpmlm_printf("iter: %u, ncl: %u, logp: %f, crit: %f\n", iter, obj->ncl, logp_old, pdel / pcum );
+    }
+
+    // 8. check stopping criterion, break the optimization loop if met, print if requested
+    if( pcum > 0 && ( pdel / pcum ) < crit ) {
+      obj->flags |= FLAG_OPTCRIT;
+      if( obj->flags & FLAG_VERBOSE ) { 
+        pdpmlm_printf( "iter: %u, ncl: %u, logp: %f, crit: %f\nstopping criterion met\n", iter, obj->ncl, logp_old, pdel / pcum ); 
       }
+      break;
     }
-    if( obj->opt & OPTION_VERBOSE && (iter % 20) == 0 ) {
-      pdpmlm_printf("iter: %u, ncl: %u, logp: %f\n", iter, obj->ncl, rev ? logp_old : logp );
-    }
+
   }
-    PutRNGstate();
+  if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }
+  PutRNGstate();
 }
 
 
 void pdpmlm_Rdump( pdpmlm_t * obj ) {
   unsigned int i, j, cls;
-  // 1. print variables  
-//  pdpmlm_printf("vgr\n");
-//  printIntegerVector( obj->vgr, obj->p, 1 );
-//  pdpmlm_printf("pgr\n");
-//  printIntegerVector( obj->pgr, obj->ngr, 1 ); // p are allocated
-//  pdpmlm_printf("ngr\n");
-//  printIntegerVector( &obj->ngr, 1, 1 );
+  
+  pdpmlm_printf("vgr\n");
+  printIntegerVector( obj->vgr, obj->p, 1 );
+  pdpmlm_printf("pgr\n");
+  printIntegerVector( obj->pgr, obj->ngr, 1 ); // p are allocated
+  pdpmlm_printf("ngr\n");
+  printIntegerVector( &obj->ngr, 1, 1 );
   pdpmlm_printf("vcl\n");
   printIntegerVector( obj->vcl, obj->ngr, 1 );
   pdpmlm_printf("pcl\n");
   printIntegerVector( obj->pcl, obj->ngr, 1 );
   pdpmlm_printf("ncl\n");
   printIntegerVector( &obj->ncl, 1, 1 );
-//  pdpmlm_printf("y\n");
-//  printRealVector( obj->y, obj->p, 1 );
-//  pdpmlm_printf("x\n");
-//  printRealVector( obj->x, obj->p*obj->q, 1 );
-//  pdpmlm_printf("p\n");
-//  printIntegerVector( &obj->p, 1, 1 );
-//  pdpmlm_printf("q\n");
-//  printIntegerVector( &obj->q, 1, 1 );
+  pdpmlm_printf("y\n");
+  printRealVector( obj->y, obj->p, 1 );
+  pdpmlm_printf("x\n");
+  printRealVector( obj->x, obj->p*obj->q, 1 );
+  pdpmlm_printf("p\n");
+  printIntegerVector( &obj->p, 1, 1 );
+  pdpmlm_printf("q\n");
+  printIntegerVector( &obj->q, 1, 1 );
   pdpmlm_printf("s\n");
   printRealVector( obj->s, obj->q*obj->q, 1 );
   pdpmlm_printf("m\n");
@@ -306,7 +314,6 @@ void pdpmlm_Rdump( pdpmlm_t * obj ) {
   pdpmlm_printf("b\n");
   printRealVector( &obj->b, 1, 1 );
   
-/*
   for(i = 0; i < obj->ngr; i++) {
     pdpmlm_printf( "group %u\n", i );
     pdpmlm_printf( "xxgr\n" );
@@ -316,8 +323,7 @@ void pdpmlm_Rdump( pdpmlm_t * obj ) {
     pdpmlm_printf( "yygr\n" );
     printRealVector( &obj->yygr[ i ], 1, 1 );
   }
-*/
-/*
+
   cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
@@ -330,6 +336,5 @@ void pdpmlm_Rdump( pdpmlm_t * obj ) {
     printRealVector( &obj->yycl[ cls ], 1, 1 );
     cls++; 
   }
-*/
 }
 

@@ -1,8 +1,8 @@
 profLinear:
-1. provide stopping criterion functionality
-2. add a summary method for profLinear
-3. add a plot method for profLinear
-4. modify code and add functions for interfacing with C functions
-5. build better example code
-6. write a script for testing and benchmarking (Hamming dist.)
-7. revise help files
+1. add a summary method for profLinear
+2. add a plot method for profLinear
+3. modify code and add functions for interfacing with C functions
+4. build better example code
+5. write a script for testing and benchmarking (Hamming dist.)
+6. revise documentation files
+7. clean up source code
