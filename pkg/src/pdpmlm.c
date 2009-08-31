@@ -119,10 +119,12 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   }
 
   // 4. b = y'y + s0*m0'm0 - m'sm
-  *b = obj->yycl[ cls ];
+  *b = obj->yycl[ cls ]; // b = y'y
   *b += obj->s0*F77_CALL(ddot)(&obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
-  F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &ione, &dzero, obj->buf, &ione );  // obj->buf = s*m
-  *b -= F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b -= m'obj->buf
+  if( obj->pcl[ cls ] > obj->q ) {
+    F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &ione, &dzero, obj->buf, &ione );  // obj->buf = s*m
+    *b -= F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b -= m'obj->buf
+  }
 
   // 5. a = a0 + nk;
   *a = obj->a0 + obj->pcl[ cls ];

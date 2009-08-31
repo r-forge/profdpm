@@ -154,7 +154,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
 
   //9. distribute the clusters initially and perform optimization
   if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf( "memory allocated\n" ); }
-  pdpmlm_divy( obj, obj->ngr );
+  pdpmlm_divy( obj, 3 );
   if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf( "model initialized\n" ); }
   pdpmlm_chunk( obj, INTEGER(iter)[0], REAL(crit)[0] );
   if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf( "optimization complete\n" ); }
