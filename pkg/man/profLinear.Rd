@@ -13,7 +13,7 @@
 \arguments{
   \item{y}{a numeric vector of observations.}
   \item{x}{a numeric matrix of covariates.}
-  \item{group}{an optional vector of integers indicating grouping among observations. Observations that are grouped will be clustered together. This is useful if several observations form a single longitudinal observation.}
+  \item{group}{an optional vector of factors (or coercible to factors) indicating grouping among observations. Observations that are grouped will be clustered together. This is useful if several observations form a single longitudinal observation.}
   \item{parm}{an optional list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in x.}
   \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm.}
   \item{crit}{a numeric scalar constituting a 'stopping criterion' for the optimization algorithm.}
