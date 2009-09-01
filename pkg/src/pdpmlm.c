@@ -5,7 +5,8 @@ void memerror() { error("failed to allocate memory"); }
 void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
   unsigned int i;
   for( i = 0; i < obj->ngr; i++ ) { 
-    pdpmlm_add( obj, i, i % ncl );
+    //pdpmlm_add( obj, i, i % ncl );
+    pdpmlm_away( obj, i );
   }
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
@@ -23,8 +24,8 @@ void pdpmlm_init( pdpmlm_t * obj ) {
 void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int i, j;
  
-  if( grp >= obj->ngr ) { pdpmlm_printf("grp: %u\n", grp); error( "pdpmlm_add: invalid argument" ); }
-  if( cls >= obj->ngr ) { pdpmlm_printf("cls: %u\n", cls); error( "pdpmlm_add: invalid argument" ); }
+  if( grp >= obj->ngr ) { pdpmlm_printf("grp: %u\n", grp); error( "pdpmlm_add: invalid grp argument" ); }
+  if( cls >= obj->ngr ) { pdpmlm_printf("cls: %u\n", cls); error( "pdpmlm_add: invalid cls argument" ); }
  
   // 1. set vcl, recompute pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
@@ -79,7 +80,9 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int old = obj->vcl[ grp ];
   if( old == cls ) { return; }
-  pdpmlm_sub( obj, grp, old );
+  if( obj->vcl[ grp ] != BAD_CLS ) {
+    pdpmlm_sub( obj, grp, old );
+  }
   pdpmlm_add( obj, grp, cls );
 }
 

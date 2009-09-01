@@ -4,6 +4,7 @@
 #include "util.h"
 #include "pdpmlm.h"
 
+#define DEBUG pdpmlm_printf("F: %s, C: %u\n", __FUNCTION__, __COUNTER__)
 
 SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEXP verb) {
   SEXP retval, elem, names, class, clust, dim;
@@ -76,11 +77,10 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
     warning( "list item \"b0\" missing, using default value" );
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = *(REAL(elem)); }
-
+ 
   //2. Allocate memory for pgr
   obj->pgr = (unsigned int *) pdpmlm_alloc( obj->p, sizeof(unsigned int) );
   if( obj->pgr == NULL ) { memerror(); }
-
 
   //3. Compute pgr, ngr
   obj->ngr = 0;
@@ -130,7 +130,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
        F77_CALL(daxpy)(&obj->q, yp, xp, &onei, obj->xygr[ obj->vgr[ i ] ], &onei); 
        obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
   }
-
+  
   //7. allocate and zero xxcl, xycl, yycl
   obj->xxcl = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
   if( obj->xxcl == NULL ) { memerror(); }

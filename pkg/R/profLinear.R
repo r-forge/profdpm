@@ -15,13 +15,13 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
   rx <- x[!miss,]
   rg <- group[!miss]
   if( any( miss ) ) {
-    warning( "removed observations with missing values: ", (1:length(y))[miss] )
+    warning( "removed observations with missing values: ", paste(" ", (1:length(y))[miss], sep="") )
   }
 
   ###################################################
   #order the data according to group
   #convert ordered y to double
-  rg <- as.factor(rg)
+  rg <- factor(rg)
   ord <- order(rg)
   ry <- as.double(ry[ord])
 
@@ -33,7 +33,7 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
   ###################################################
   #convert ordered group to integers from 0,1,...
   rg <- as.integer(unclass(rg[ord])-1)
- 
+
   ###################################################
   #call the C function
   ret <- .Call("profLinear", ry, rx, rg, as.list(parm), as.integer(iter), as.numeric(crit), as.logical(verb), PACKAGE="profdpm")
