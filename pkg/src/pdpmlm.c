@@ -3,10 +3,17 @@
 void memerror() { error("failed to allocate memory"); }
 
 void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
-  unsigned int i;
-  for( i = 0; i < obj->ngr; i++ ) { 
-    //pdpmlm_add( obj, i, i % ncl );
-    pdpmlm_away( obj, i );
+  unsigned int i, grp = 0, cls = 0, set = 0;
+  pdpmlm_add( obj, grp, cls );
+  for( grp = 1; grp < obj->ngr; grp++ ) { 
+    set = 0;
+    for( i = 0; i < cls; i++ ) {
+      pdpmlm_add( obj, grp, cls );
+      pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
+      if( ( obj->b / obj->yycl[ cls ] ) < 0.95 ) { set = 1; break; }
+      else { pdpmlm_sub( obj, grp, cls ); }
+    }
+    if( set == 0 ) { pdpmlm_add( obj, grp, ++cls ); }
   }
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
