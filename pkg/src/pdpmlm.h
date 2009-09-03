@@ -25,7 +25,7 @@
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
 #define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
-#define FLAG_EMPTY_2  1<<2
+#define FLAG_WEAKPRI  1<<2  // weaken the prior distribution (don't use it)
 #define FLAG_EMPTY_3  1<<3
 #define FLAG_EMPTY_4  1<<4
 #define FLAG_EMPTY_5  1<<5

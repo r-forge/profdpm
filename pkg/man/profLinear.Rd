@@ -7,7 +7,7 @@
 }
 
 \usage{
-  profLinear(y, x, group, parm, iter = 1000, crit = 1e-5, verb=FALSE)
+  profLinear(y, x, group, parm, iter = 1000, crit = 1e-5, verb=FALSE, weak=FALSE)
 }
 
 \arguments{
@@ -18,6 +18,7 @@
   \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm.}
   \item{crit}{a numeric scalar constituting a 'stopping criterion' for the optimization algorithm.}
   \item{verb}{a logical value indicating whether the routine should be verbose in printing.}
+  \item{weak}{a logical value indicating whether the routine should weaken the prior distribution.}
 }
 
 \value{

@@ -142,13 +142,19 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls = 0;
-  double logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
+  double logp;
+  if( obj->flags & FLAG_WEAKPRI == 0 ) {
+    logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
+  }
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
     if( obj->b == 0 ) { error( "obj->b == 0" ); }
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-    logp += lfactorial( obj->pcl[ cls ] - 1 );
+    if( obj->flags & FLAG_WEAKPRI == 0 ) {
+      logp -= log( obj->pcl[ cls ] );
+      //logp -= lfactorial( obj->pcl[ cls ] - 1 );
+    }
     cls++;
   }
   return logp;

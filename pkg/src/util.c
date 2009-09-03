@@ -4,9 +4,9 @@
 
 double lfactorial(unsigned int x) {
   /* Jolley, L.B.W. (1961) Summation of Series. pp. 28
-  ** ISBN 0-486-60023-8
-  */
-  return(LN_SQRT_2PI + (0.5 + x)*log(x) - x);
+     ISBN 0-486-60023-8  */
+  if( x == 0 ) { return 0; }
+  return ( LN_SQRT_2PI + (0.5 + x)*log(x) - x );
 }
 
 double factorial(unsigned int x) {

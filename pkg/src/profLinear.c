@@ -6,7 +6,7 @@
 
 #define DEBUG pdpmlm_printf("F: %s, C: %u\n", __FUNCTION__, __COUNTER__)
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEXP verb) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEXP verb, SEXP weak) {
   SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
   unsigned int i, j, k, cls, onei=1;
@@ -41,6 +41,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
   if( obj == NULL ) { memerror(); }
   obj->flags   = 0;
   if( LOGICAL(verb)[0] ) { obj->flags |= FLAG_VERBOSE; }
+  if( LOGICAL(weak)[0] ) { obj->flags |= FLAG_WEAKPRI; }
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = INTEGER(group);

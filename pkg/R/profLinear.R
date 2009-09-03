@@ -1,4 +1,4 @@
-profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
+profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE, weak=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { stop("y must be numeric") }
@@ -36,7 +36,7 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
 
   ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, as.list(parm), as.integer(iter), as.numeric(crit), as.logical(verb), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, as.list(parm), as.integer(iter), as.numeric(crit), as.logical(verb), as.logical(weak), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering
