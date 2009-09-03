@@ -37,7 +37,7 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   // 1. set vcl, recompute pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
   if( obj->pcl[ cls ] == 0 ) { obj->ncl++; }
-  obj->pcl[ cls ] += obj->pgr[ grp ];
+  obj->pcl[ cls ] += 1;
 
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
@@ -71,7 +71,7 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 
   // 1. set vcl, recompute pcl, and possibly ncl
   obj->vcl[ grp ] = BAD_CLS; // comment this out after debug
-  obj->pcl[ cls ] -= obj->pgr[ grp ];
+  obj->pcl[ cls ] -= 1;
   if( obj->pcl[ cls ] == 0 ) { obj->ncl--; }
 
   // 2. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
@@ -131,10 +131,9 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // 4. b = y'y + s0*m0'm0 - m'sm
   *b = obj->yycl[ cls ]; // b = y'y
   *b += obj->s0*F77_CALL(ddot)(&obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
-  if( obj->pcl[ cls ] > obj->q ) {
-    F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &ione, &dzero, obj->buf, &ione );  // obj->buf = s*m
-    *b -= F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b -= m'obj->buf
-  }
+  F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &ione, &dzero, obj->buf, &ione );  // obj->buf = s*m
+  *b -= F77_CALL(ddot)( &obj->q, m, &ione, obj->buf, &ione ); // b -= m'obj->buf
+ 
 
   // 5. a = a0 + nk;
   *a = obj->a0 + obj->pcl[ cls ];
@@ -147,6 +146,7 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
+    if( obj->b == 0 ) { error( "obj->b == 0" ); }
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
     logp += lfactorial( obj->pcl[ cls ] - 1 );
     cls++;
