@@ -2,7 +2,7 @@
 
 void memerror() { error("failed to allocate memory"); }
 
-void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
+void pdpmlm_divy( pdpmlm_t * obj ) {
   unsigned int i, grp = 0, cls = 0, set = 0;
   pdpmlm_add( obj, grp, cls );
   for( grp = 1; grp < obj->ngr; grp++ ) { 
@@ -10,10 +10,11 @@ void pdpmlm_divy( pdpmlm_t * obj, unsigned int ncl ) {
     for( i = 0; i < cls; i++ ) {
       pdpmlm_add( obj, grp, cls );
       pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-      if( ( obj->b / obj->yycl[ cls ] ) < 0.95 ) { set = 1; break; }
+      if( ( obj->b / obj->yycl[ cls ] ) < 0.98 ) { set = 1; break; }
       else { pdpmlm_sub( obj, grp, cls ); }
     }
     if( set == 0 ) { pdpmlm_add( obj, grp, ++cls ); }
+
   }
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
@@ -42,9 +43,11 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
     obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
-    if( obj->xxcl[ cls ] == NULL ) { error("memory allocation failed"); }
+    if( obj->xxcl[ cls ] == NULL ) { memerror(); }
+    else { obj->mem += obj->q * obj->q * sizeof(double); }
     obj->xycl[ cls ] = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-    if( obj->xycl[ cls ] == NULL ) { error("memory allocation failed"); }
+    if( obj->xycl[ cls ] == NULL ) { memerror(); }
+    else { obj->mem += obj->q * sizeof(double); }
     obj->yycl[ cls ] = 0.0;
     for( i = 0; i < obj->q; i++ ) {
       obj->xycl[ cls ][ i ] = 0.0;
@@ -143,18 +146,15 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls = 0;
   double logp;
-  if( obj->flags & FLAG_WEAKPRI == 0 ) {
-    logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
-  }
+  logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
     pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-    if( obj->b == 0 ) { error( "obj->b == 0" ); }
     logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-    if( obj->flags & FLAG_WEAKPRI == 0 ) {
-      logp -= log( obj->pcl[ cls ] );
-      //logp -= lfactorial( obj->pcl[ cls ] - 1 );
-    }
+    // strong form of prior - promotes fewer groups of different size
+    //logp += lfactorial( obj->pcl[ cls ] - 1 );
+    // weak form of prior - allows more similar sized groups
+    logp += log( obj->pcl[ cls ] );
     cls++;
   }
   return logp;
@@ -196,7 +196,6 @@ void pdpmlm_away( pdpmlm_t * obj, unsigned int grp ) {
 
   if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
 }
-  
 
 void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   unsigned int i, test_cls, best_cls;
@@ -233,7 +232,6 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
 }
     
-
 void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
   double logp_old, logp, pdel = 1, pcum = 0;
@@ -244,12 +242,15 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
   grps    = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
   if( grps == NULL ) { memerror(); }
 
+  // 1. select the number of groups to shuffle
+  ngrps = obj->ngr / 3;
+  ngrps = ngrps == 0 ? 1 : ngrps;
+  if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
+    pdpmlm_printf( "updating %u of %u groups per iteration\n", ngrps, obj->ngr );
+  }
+
   GetRNGstate();
   while( iter++ < itermax ) {
-
-    // 1. select the number of groups to shuffle
-    ngrps = obj->ngr / 3;
-    ngrps = ngrps == 0 ? 1 : ngrps;
 
     // 2. randomly select ngrps groups to shuffle, save indicators
     for( i = 0; i < ngrps; i++ ) {
@@ -271,17 +272,18 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
     logp = pdpmlm_logp( obj );
     if( logp < logp_old ) {    
         for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
+        pdel *= 0.7;
     }
     
     // 6. update the stopping criterion
     else{ 
-      pdel = 0.8 * (logp - logp_old) + 0.2 * pdel;
-      pcum += pdel; 
+      pdel = 0.3 * (logp - logp_old) + 0.7 * pdel;
       logp_old = logp;
     }
+    pcum += pdel;
 
     // 7. print summary if requested every 20 iterations
-    if( obj->flags & FLAG_VERBOSE && (iter % 20) == 0 ) {
+    if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
       pdpmlm_printf("iter: %u, ncl: %u, logp: %f, crit: %f\n", iter, obj->ncl, logp_old, pdel / pcum );
     }
 
