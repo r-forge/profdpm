@@ -2,6 +2,6 @@ profLinear:
 1. add a summary method for profLinear
 2. add a plot method for profLinear
 3. modify code and add functions for interfacing with C functions
-4. build better example code
 5. write a script for testing and benchmarking (Hamming dist.)
 6. clean up source code
+7. add min and max number of clusters option
