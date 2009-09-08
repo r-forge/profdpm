@@ -89,16 +89,16 @@ void memerror();
 // Assign the observations/groups according to a simple algorithm
 void         pdpmlm_divy( pdpmlm_t * obj );
 
-// Add an observation/group to a cluster new 
+// Add an observation/group to a cluster cls
 void         pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Remove an observation/group from cluster clt 
 void         pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
-// Move an observation/group from its current cluster to cluster clt
+// Move an observation/group to cluster clt
 void         pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
-// Move an observation/group from its current cluster to cluster cls, return the change in logp
+// Move an observation/group to cluster cls, return the resulting change in logp
 double       pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
 // Get the index of an free (empty) cluster of BAD_CLS if none exist
@@ -113,7 +113,7 @@ void         pdpmlm_away( pdpmlm_t * obj, unsigned int grp );
 // Compute the posterior parameters s, m, a, and b for a given cluster
 void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
 
-// Compute the log posterior value for a particular cluster
+// Compute part of the log posterior value for a particular cluster
 double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );
 
 // Compute the log posterior value for the model 
@@ -121,8 +121,4 @@ double       pdpmlm_logp( pdpmlm_t * obj );
 
 // Perform chunk style optimization
 void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit);
-
-// (Note: This function is R specific) This function prints a 
-// representation of the pdpmlm_t to the R terminal
-void         pdpmlm_Rdump( pdpmlm_t * obj );
 #endif
