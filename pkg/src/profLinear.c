@@ -6,7 +6,7 @@
 
 #define DEBUG pdpmlm_printf("F: %s, C: %u\n", __FUNCTION__, __COUNTER__)
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEXP verb) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
   SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
   unsigned int i, j, k, cls, onei=1;
@@ -21,7 +21,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
   SET_STRING_ELT(names, 0, mkChar("y"));
   SET_STRING_ELT(names, 1, mkChar("x"));
   SET_STRING_ELT(names, 2, mkChar("group"));
-  SET_STRING_ELT(names, 3, mkChar("parm"));
+  SET_STRING_ELT(names, 3, mkChar("param"));
   SET_STRING_ELT(names, 4, mkChar("clust"));
   SET_STRING_ELT(names, 5, mkChar("a"));
   SET_STRING_ELT(names, 6, mkChar("b"));
@@ -33,7 +33,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
   SET_VECTOR_ELT(retval, 0, y);
   SET_VECTOR_ELT(retval, 1, x);
   SET_VECTOR_ELT(retval, 2, group);
-  SET_VECTOR_ELT(retval, 3, parm);
+  SET_VECTOR_ELT(retval, 3, param);
   SET_VECTOR_ELT(retval, 4, clust);
 
   //1. Allocate obj, make assignments, check priors
@@ -41,26 +41,27 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
   if( obj == NULL ) { memerror(); }
   else { obj->mem = sizeof(pdpmlm_t); }
   obj->flags   = 0;
-  if( LOGICAL(verb)[0] ) { obj->flags |= FLAG_VERBOSE; }
+  if( LOGICAL(verbose)[0] ) { obj->flags |= FLAG_VERBOSE; }
+  if( INTEGER(prior)[0] == 1 ) { obj->flags |= FLAG_PRICLUS; }
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = INTEGER(group);
   dim        = getAttrib(x, R_DimSymbol); 
   obj->p     = INTEGER(dim)[ 1 ];
   obj->q     = INTEGER(dim)[ 0 ];
-  elem       = getListElementByName(parm, "alpha");
+  elem       = getListElementByName(param, "alpha");
   if( elem == R_NilValue ) {
-    warning( "list item \"alpha\" missing from parm, using default value" );
+    warning( "list item \"alpha\" missing from param, using default value" );
     obj->alp = DEFAULT_ALP;
   } else { obj->alp = *(REAL(elem)); }
-  elem       = getListElementByName(parm, "s0");
+  elem       = getListElementByName(param, "s0");
   if( elem == R_NilValue ) {
-    warning( "list item \"s0\" missing from parm, using default value" );
+    warning( "list item \"s0\" missing from param, using default value" );
     obj->s0 = DEFAULT_S0;
   } else { obj->s0 = *(REAL(elem)); }
-  elem       = getListElementByName(parm, "m0");
+  elem       = getListElementByName(param, "m0");
   if( elem == R_NilValue ) {
-    warning( "list item \"m0\" missing from parm, using default values" );
+    warning( "list item \"m0\" missing from param, using default values" );
     obj->m0 = (double *) pdpmlm_alloc( obj->q, sizeof(double) ); 
     if( obj->m0 == NULL ) { memerror(); }
     else { obj->mem += obj->q * sizeof(double); }
@@ -72,12 +73,12 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
     else { obj->mem += obj->q * sizeof(double); }
     for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
   } else { obj->m0 = REAL(elem); }
-  elem       = getListElementByName(parm, "a0");
+  elem       = getListElementByName(param, "a0");
   if( elem == R_NilValue ) { 
     warning( "list item \"a0\" missing, using default value" );
     obj->a0 = DEFAULT_A0;
   } else { obj->a0 = *(REAL(elem)); }
-  elem       = getListElementByName(parm, "b0");
+  elem       = getListElementByName(param, "b0");
   if( elem == R_NilValue ) {
     warning( "list item \"b0\" missing, using default value" );
     obj->b0 = DEFAULT_B0;
@@ -179,7 +180,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP parm, SEXP iter, SEXP crit, SEX
     pdpmlm_printf( "optimization started\n" );
   }
   pdpmlm_divy( obj );
-  pdpmlm_chunk( obj, INTEGER(iter)[0], REAL(crit)[0] );
+  pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "optimization complete\n" ); 
     pdpmlm_printf( "final allocated memory: %fMb\n", obj->mem/1000000.0 );

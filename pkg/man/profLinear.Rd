@@ -7,17 +7,18 @@
 }
 
 \usage{
-  profLinear(y, x, group, parm, iter = 1000, crit = 1e-5, verb=FALSE)
+  profLinear(y, x, group, param, maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE)
 }
 
 \arguments{
   \item{y}{a numeric vector of observations.}
   \item{x}{a numeric matrix of covariates.}
   \item{group}{an optional vector of factors (or coercible to factors) indicating grouping among observations. Observations that are grouped will be clustered together. This is useful if several observations form a single longitudinal observation.}
-  \item{parm}{an optional list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in x.}
-  \item{iter}{an integer value specifying the maximum number of iterations for the optimization algorithm.}
+  \item{param}{an optional list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in x.}
+  \item{maxiter}{an integer value specifying the maximum number of iterations for the optimization algorithm.}
   \item{crit}{a numeric scalar constituting a 'stopping criterion' for the optimization algorithm.}
-  \item{verb}{a logical value indicating whether the routine should be verbose in printing.}
+  \item{prior}{a character string indicating the type of prior to be used for the clustering indicators. Meaningful values for this string are \sQuote{Dirichlet} (default) and \sQuote{cluster}. }
+  \item{verbose}{a logical value indicating whether the routine should be verbose in printing.}
 }
 
 \value{
@@ -35,6 +36,8 @@
 
 \details{
 This function fits a Dirichlet process mixture of linear models (DPMLM) using the profile method. This method will group the observations into clusters. The clusters are determined by maximizing the marginal posterior distribution over the space of possible clusters. Each cluster has an associated linear model. Notationally, the linear model for cluster \eqn{ latex }{ k } has the form \deqn{ latex }{ y_k = \gamma_k\prime x_k + \epsilon_k }, where \eqn{ latex }{ y_k } and \eqn{ latex }{ x_k } are the observation vector and covariate matrix for a particular cluster, \eqn{ latex }{ \epsilon_k } has a multivariate normal distribution with mean zero and precision matrix \eqn{ latex }{ \tau_kI }, and \eqn{ latex }{ \gamma_k } is the vector of linear coefficients, about which inference is made. In the DPMLM, conditional on the clustering, \eqn{ latex }{ \gamma_k } and \eqn{ latex }{ tau_k } have a joint normal-gamma posterior distribution of the form \deqn{ latex }{ p(m_k, tau_k| y, x) = n( \gamma_k | m_k, tau_k s_k ) g( \tau_k | a_k, b_k ) }, where \eqn{ latex }{ n(\cdot) } is the multivariate normal density function with mean vector \eqn{ latex }{ m_k } and precision matrix \eqn{ latex }{ \tau_k s_k } and \eqn{ latex }{ g(\cdot) } is the gamma density function with shape and scale parameters \eqn{ latex }{ a_k } and \eqn{ latex }{ b_k }. In addition to the cluster indicators, the posterior quantities \eqn{ latex }{ s_k }, \eqn{ latex }{ m_k }, \eqn{ latex }{ a_k }, and \eqn{ latex }{ b_k } are provided for each cluster in the return value.
+
+The augmented Dirichlet process yields a natural prior distribution for the cluster indicators. By default, this \sQuote{Dirichlet} prior distribution is used. However, this prior tends to force observations into a small number of clusters with non-homogeneous sizes. In contrast, the \sQuote{cluster} prior distribution allows for more clusters and promotes homogeneity is cluster size.
 
 The optimization strategy for this model is still under investigation and may be unsuitable for some datasets. Optimization involves computing a moving average of the relative change in the marginal posterior distribution over the possible clusters after each iteration. The optimization stopping criterion is the minumim value this quantity can take before stopping the optimization cycle. If the optimization cycle reaches the maximum allowable iterations before meeting the stopping criterion, a warning is issued. Even if the optimization criterion is met, the resulting clusters may not represent the global maximum under the marginal posterior distribution over the possible clusters. 
 

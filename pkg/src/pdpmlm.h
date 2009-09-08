@@ -25,7 +25,7 @@
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
 #define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
-#define FLAG_EMPTY_2  1<<2
+#define FLAG_PRICLUS  1<<2  // use a clustering prior instead of DP prior
 #define FLAG_EMPTY_3  1<<3
 #define FLAG_EMPTY_4  1<<4
 #define FLAG_EMPTY_5  1<<5
@@ -86,11 +86,8 @@ unsigned int    mem;    // memory usage counter
 
 void memerror(); 
 
-// Assign the observations/groups in sequence among ncl groups
+// Assign the observations/groups according to a simple algorithm
 void         pdpmlm_divy( pdpmlm_t * obj );
-
-// Assign the observations/groups according to a smart algorithm
-void         pdpmlm_init( pdpmlm_t * obj );
 
 // Add an observation/group to a cluster new 
 void         pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
@@ -100,6 +97,9 @@ void         pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
 
 // Move an observation/group from its current cluster to cluster clt
 void         pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
+
+// Move an observation/group from its current cluster to cluster cls, return the change in logp
+double       pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
 // Get the index of an free (empty) cluster of BAD_CLS if none exist
 unsigned int pdpmlm_free( pdpmlm_t * obj );
@@ -112,6 +112,9 @@ void         pdpmlm_away( pdpmlm_t * obj, unsigned int grp );
 
 // Compute the posterior parameters s, m, a, and b for a given cluster
 void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
+
+// Compute the log posterior value for a particular cluster
+double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );
 
 // Compute the log posterior value for the model 
 double       pdpmlm_logp( pdpmlm_t * obj );

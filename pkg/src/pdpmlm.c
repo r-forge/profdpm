@@ -21,14 +21,6 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
   }
 }
 
-void pdpmlm_init( pdpmlm_t * obj ) {
-  unsigned int grp;
-  pdpmlm_add( obj, 0, 0 );
-  for( grp = 1; grp < obj->ngr; grp++ ) {
-    
-  }
-}
-
 void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int i, j;
  
@@ -90,11 +82,54 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int old = obj->vcl[ grp ];
   if( old == cls ) { return; }
-  if( obj->vcl[ grp ] != BAD_CLS ) {
+  if( old != BAD_CLS ) {
     pdpmlm_sub( obj, grp, old );
   }
   pdpmlm_add( obj, grp, cls );
 }
+
+double pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
+  double logp = 0.0;
+  unsigned int oldcls = obj->vcl[ grp ];
+  unsigned int oldncl = obj->ncl;
+  if( oldcls == cls ) { return logp; }
+  if( oldcls != BAD_CLS ) {
+    logp -= pdpmlm_logpcls( obj, oldcls );
+    pdpmlm_sub( obj, grp, oldcls );
+    logp += pdpmlm_logpcls( obj, oldcls );
+  }
+  logp -= pdpmlm_logpcls( obj, cls );
+  pdpmlm_add( obj, grp, cls );
+  logp += pdpmlm_logpcls( obj, cls );
+  if( obj->ncl > oldncl ) { logp += log( obj->alp ) - log( obj->ncl ); }
+  else if( oldncl > obj->ncl ) { logp -= log( obj->alp ) - log( oldncl ); }
+  return logp;
+}
+
+double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
+  double logp;
+  if( obj->pcl[ cls ] == 0 ) { return 0.0; }
+  pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
+  logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
+  // cluster form of prior - allows more similar sized groups
+  if( obj->flags & FLAG_PRICLUS ) { logp += log( obj->pcl[ cls ] ); }
+  // Dirichlet form of prior - promotes fewer groups of different size
+  else { logp += lfactorial( obj->pcl[ cls ] - 1 ); }
+  return logp;
+}
+
+double pdpmlm_logp( pdpmlm_t * obj ) {
+  unsigned int i, cls = 0;
+  double logp;
+  logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
+  for( i = 0; i < obj->ncl; i++ ) {
+    while( obj->pcl[ cls ] == 0 ) { cls++; }
+    logp += pdpmlm_logpcls( obj, cls );
+    cls++;
+  }
+  return logp;
+}
+
 
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
   unsigned int i, j, d, ione=1, inf, info;
@@ -143,23 +178,6 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 }
 
 
-double pdpmlm_logp( pdpmlm_t * obj ) {
-  unsigned int i, cls = 0;
-  double logp;
-  logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
-  for( i = 0; i < obj->ncl; i++ ) {
-    while( obj->pcl[ cls ] == 0 ) { cls++; }
-    pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-    logp += lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-    // strong form of prior - promotes fewer groups of different size
-    //logp += lfactorial( obj->pcl[ cls ] - 1 );
-    // weak form of prior - allows more similar sized groups
-    logp += log( obj->pcl[ cls ] );
-    cls++;
-  }
-  return logp;
-}
-
 unsigned int pdpmlm_free( pdpmlm_t * obj ) {
   unsigned int cls = 0;
   while( cls < obj->ngr && obj->pcl[ cls ] > 0 ) { cls++; }
@@ -169,7 +187,7 @@ unsigned int pdpmlm_free( pdpmlm_t * obj ) {
 
 void pdpmlm_away( pdpmlm_t * obj, unsigned int grp ) {
   unsigned int i, test_cls, old_cls, best_cls;
-  double test_logp, best_logp = DBL_MIN;
+  double test_delp=0, best_delp=0;
 
   old_cls = obj->vcl[ grp ];
 
@@ -178,17 +196,15 @@ void pdpmlm_away( pdpmlm_t * obj, unsigned int grp ) {
   if( obj->pcl[ best_cls ] > obj->pgr[ grp ] ) {
     best_cls = pdpmlm_free( obj );
     if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
-    pdpmlm_move( obj, grp, best_cls );
-    best_logp = pdpmlm_logp( obj );
+    best_delp = pdpmlm_movep( obj, grp, best_cls );
   }
 
   test_cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ test_cls ] == 0 ) { test_cls++; }
-    pdpmlm_move( obj, grp, test_cls );
-    test_logp = pdpmlm_logp( obj );
-    if( test_logp > best_logp && test_cls != old_cls) { 
-      best_logp = test_logp;
+    test_delp += pdpmlm_movep( obj, grp, test_cls );
+    if( test_delp > best_delp && test_cls != old_cls) { 
+      best_delp = test_delp;
       best_cls  = test_cls;
     }
     test_cls++;
@@ -199,20 +215,18 @@ void pdpmlm_away( pdpmlm_t * obj, unsigned int grp ) {
 
 void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   unsigned int i, test_cls, best_cls;
-  double test_logp, best_logp;
+  double test_delp=0, best_delp=0;
 
   if( grp >= obj->ngr ) { error( "pdpmlm_best: invalid argument" ); }
 
-  best_logp = pdpmlm_logp( obj );
   best_cls = obj->vcl[ grp ];
 
-  if( obj->pcl[ best_cls ] > obj->pgr[ grp ] ) {
+  if( obj->pcl[ best_cls ] > 1 ) {
     test_cls = pdpmlm_free( obj );
     if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
-    pdpmlm_move( obj, grp, test_cls );
-    test_logp = pdpmlm_logp( obj );
-    if( test_logp > best_logp ) { 
-      best_logp = test_logp;
+    test_delp += pdpmlm_movep( obj, grp, test_cls );
+    if( test_delp > best_delp ) { 
+      best_delp = test_delp;
       best_cls  = test_cls;
     }
   }
@@ -220,10 +234,9 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   test_cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->pcl[ test_cls ] == 0 ) { test_cls++; }
-    pdpmlm_move( obj, grp, test_cls );
-    test_logp = pdpmlm_logp( obj );
-    if( test_logp > best_logp ) { 
-      best_logp = test_logp;
+    test_delp += pdpmlm_movep( obj, grp, test_cls );
+    if( test_delp > best_delp ) { 
+      best_delp = test_delp;
       best_cls  = test_cls;
     }
     test_cls++;

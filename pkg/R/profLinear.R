@@ -1,4 +1,4 @@
-profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
+profLinear <- function(y, x, group, param, maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { stop("y must be numeric") }
@@ -6,7 +6,7 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
   if(missing(group)) { group <- seq(1, length(y)) }
   if(length(y) != length(group)) { stop("length(y) must equal length(group)") }
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
-  if(missing(parm)) { parm <- list(alpha=0.001,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
+  if(missing(param)) { param <- list(alpha=0.001,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
 
   ###################################################
   #remove missing observations, issue warning
@@ -35,8 +35,17 @@ profLinear <- function(y, x, group, parm, iter=1000, crit=1e-5, verb=FALSE) {
   rg <- as.integer(unclass(rg[ord])-1)
 
   ###################################################
+  #convert prior to integer
+  if( prior == "Dirichlet" ) { prior <- 0 }
+  else if( prior == "cluster" ) { prior <- 1 }
+  else{ 
+    prior <- 0
+    warning("prior must be \'Dirichlet\' or \'cluster\', using \'Dirichlet\'")  
+  }
+
+  ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, as.list(parm), as.integer(iter), as.numeric(crit), as.logical(verb), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, as.list(param), as.integer(maxiter), as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering
