@@ -6,6 +6,7 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
   unsigned int i, grp = 0, cls = 0, set = 0;
   pdpmlm_add( obj, grp, cls );
   for( grp = 1; grp < obj->ngr; grp++ ) { 
+    
     set = 0;
     for( i = 0; i < cls; i++ ) {
       pdpmlm_add( obj, grp, cls );
@@ -14,7 +15,6 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
       else { pdpmlm_sub( obj, grp, cls ); }
     }
     if( set == 0 ) { pdpmlm_add( obj, grp, ++cls ); }
-
   }
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
@@ -111,9 +111,9 @@ double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
   if( obj->pcl[ cls ] == 0 ) { return 0.0; }
   pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
   logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-  // cluster form of prior - allows more similar sized groups
+  // "cluster" form of prior - allows more similar sized groups
   if( obj->flags & FLAG_PRICLUS ) { logp += log( obj->pcl[ cls ] ); }
-  // Dirichlet form of prior - promotes fewer groups of different size
+  // "Dirichlet" form of prior - promotes fewer groups of different size
   else { logp += lfactorial( obj->pcl[ cls ] - 1 ); }
   return logp;
 }

@@ -6,7 +6,7 @@ profLinear <- function(y, x, group, param, maxiter=1000, crit=1e-5, prior="Diric
   if(missing(group)) { group <- seq(1, length(y)) }
   if(length(y) != length(group)) { stop("length(y) must equal length(group)") }
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
-  if(missing(param)) { param <- list(alpha=0.001,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
+  if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
 
   ###################################################
   #remove missing observations, issue warning

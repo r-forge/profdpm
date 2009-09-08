@@ -14,11 +14,11 @@
 #define pdpmlm_alloc(count, size)  R_alloc(count, size)
 #define pdpmlm_printf Rprintf
 
-#define DEFAULT_ALP    0.001
+#define DEFAULT_ALP    1.000
 #define DEFAULT_A0     0.001
 #define DEFAULT_B0     0.001
-#define DEFAULT_M0     0
-#define DEFAULT_S0     1
+#define DEFAULT_M0     0.000
+#define DEFAULT_S0     1.000
 
 #define BAD_CLS INT_MAX
 
