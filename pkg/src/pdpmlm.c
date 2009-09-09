@@ -283,14 +283,14 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
 
     // 5. compute logp, keep new clustering if better, else revert to old
     logp = pdpmlm_logp( obj );
-    if( logp < logp_old ) {    
+    if( logp <= logp_old ) {    
         for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
-        pdel *= 0.7;
+        pdel *= 0.9;
     }
     
     // 6. update the stopping criterion
     else{ 
-      pdel = 0.3 * (logp - logp_old) + 0.7 * pdel;
+      pdel = 0.5 * (logp - logp_old) + 0.5 * pdel;
       logp_old = logp;
     }
     pcum += pdel;
