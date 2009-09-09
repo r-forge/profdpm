@@ -79,7 +79,8 @@ double        * m;      // storage for an m vector (qx1)
 double          a;      // storage for an a scalar
 double          b;      // storage for an b scalar
 
-double        * buf;    // temporary storage (qx1)
+double        * fbuf;   // temporary storage for fortran routines (qx1)
+unsigned int  * pbuf;   // temporary storage for pdpmlm routines (ngrx1)
 unsigned int    mem;    // memory usage counter
 
 } pdpmlm_t;
@@ -103,6 +104,12 @@ double       pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
 // Get the index of an free (empty) cluster of BAD_CLS if none exist
 unsigned int pdpmlm_free( pdpmlm_t * obj );
+
+// Try to split cluster cls
+void         pdpmlm_split( pdpmlm_t * obj, unsigned int cls );
+
+// Try to merge cluster cls
+void         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
 
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );

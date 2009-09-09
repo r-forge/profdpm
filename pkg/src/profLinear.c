@@ -162,16 +162,19 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
     obj->yycl[ i ] = 0.0;
   }
 
-  //8. allocate s, m, and buf
+  //8. allocate s, m, fbuf, and pbuf
   obj->s = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
   if( obj->s == NULL ) { memerror(); }
   else { obj->mem += obj->q * obj->q * sizeof(double); }
   obj->m = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
   if( obj->m == NULL ) { memerror(); }
   else { obj->mem += obj->q * sizeof(double); }
-  obj->buf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-  if( obj->buf == NULL ) { memerror(); }
+  obj->fbuf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
+  if( obj->fbuf == NULL ) { memerror(); }
   else { obj->mem += obj->q * sizeof(double); }
+  obj->pbuf = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof(unsigned int) );
+  if( obj->pbuf == NULL ) { memerror(); }
+  else { obj->mem += obj->ngr * sizeof(unsigned int); }
 
 
   //9. distribute the clusters initially and perform optimization
