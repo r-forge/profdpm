@@ -4,7 +4,6 @@
 #include "util.h"
 #include "pdpmlm.h"
 
-#define DEBUG pdpmlm_printf("F: %s, C: %u\n", __FUNCTION__, __COUNTER__)
 
 SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
   SEXP retval, elem, names, class, clust, dim;

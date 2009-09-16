@@ -24,7 +24,7 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
 
 void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int i, j;
- 
+   
   if( grp >= obj->ngr ) { pdpmlm_printf("grp: %u\n", grp); error( "pdpmlm_add: invalid grp argument" ); }
   if( cls >= obj->ngr ) { pdpmlm_printf("cls: %u\n", cls); error( "pdpmlm_add: invalid cls argument" ); }
  
@@ -82,6 +82,7 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 
 void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int old = obj->vcl[ grp ];
+
   if( old == cls ) { return; }
   if( old != BAD_CLS ) {
     pdpmlm_sub( obj, grp, old );
@@ -138,7 +139,7 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
   if( obj->pcl[ cls ] == 0 ) { return; }
 
-  if( cls >= obj->ngr ) { error( "pdpmlm_parm: invalid argument" ); }
+  if( cls >= obj->ngr ) { pdpmlm_printf("cls: %u\n", cls); error( "pdpmlm_parm: invalid argument" ); }
 
   // 1. load s with s0I + x'x, load m with s0m0 + x'y
   d = 0;
@@ -193,7 +194,7 @@ double pdpmlm_split( pdpmlm_t * obj, unsigned int cls ) {
   if( obj->pcl[ cls ] < 2 ) { return 0.0; }
   size = obj->pcl[ cls ];
   new = pdpmlm_free( obj );
- 
+
   //0. enumerate groups in cls
   for( testgrp = 0; testgrp < size; testgrp++ ) {
     while( obj->vcl[ grp ] != cls ) { grp++; }
@@ -400,10 +401,11 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
 
     // 6.5 split-merge each cls
     spmercls = 0;
-    for( spmercnt = 0; spmercnt < obj->ncl; spmercnt++ ) {
-      while( obj->pcl[ spmercls ] == 0 ) { spmercls++; }
-      pdel += pdpmlm_split( obj, spmercls );
-      pdel += pdpmlm_merge( obj, spmercls );
+    while( spmercls < obj->ngr ) {
+      if( obj->pcl[ spmercls ] > 0 ) {
+        pdel += pdpmlm_split( obj, spmercls );
+        pdel += pdpmlm_merge( obj, spmercls );
+      }
       spmercls++;
     }
     pcum += pdel;
@@ -417,7 +419,7 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
     if( pcum > 0 && ( pdel / pcum ) < crit ) {
       obj->flags |= FLAG_OPTCRIT;
       if( obj->flags & FLAG_VERBOSE ) { 
-        pdpmlm_printf( "iter: %u, ncl: %u, logp: %f, ngrps: %u crit: %f\nstopping criterion met\n", iter, obj->ncl, logp_old, ngrps, pdel / pcum ); 
+        pdpmlm_printf( "iter: %u, ncl: %u, logp: %f, ngrps: %u, crit: %f\nstopping criterion met\n", iter, obj->ncl, logp_old, ngrps, pdel / pcum ); 
       }
       break;
     }

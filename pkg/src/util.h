@@ -2,6 +2,9 @@
 #include <string.h>
 #include <Rinternals.h>
 
+//#define DEBUG //
+#define DEBUG pdpmlm_printf("F: %s, C: %u\n", __FUNCTION__, __COUNTER__)
+
 /* log(sqrt(2*pi)) == log(2*pi)/2 */
 #define LN_SQRT_2PI 0.918938533204672741780329736406
 
