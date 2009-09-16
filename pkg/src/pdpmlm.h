@@ -106,10 +106,10 @@ double       pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 unsigned int pdpmlm_free( pdpmlm_t * obj );
 
 // Try to split cluster cls
-void         pdpmlm_split( pdpmlm_t * obj, unsigned int cls );
+double         pdpmlm_split( pdpmlm_t * obj, unsigned int cls );
 
 // Try to merge cluster cls
-void         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
+double         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
 
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
@@ -125,6 +125,9 @@ double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );
 
 // Compute the log posterior value for the model 
 double       pdpmlm_logp( pdpmlm_t * obj );
+
+// Perform split merge style optimization
+void         pdpmlm_spmer( pdpmlm_t * obj, unsigned int itermax, double crit);
 
 // Perform chunk style optimization
 void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit);

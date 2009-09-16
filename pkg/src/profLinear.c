@@ -184,6 +184,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   }
   pdpmlm_divy( obj );
   pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+  //pdpmlm_spmer( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "optimization complete\n" ); 
     pdpmlm_printf( "final allocated memory: %fMb\n", obj->mem/1000000.0 );
