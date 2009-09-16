@@ -47,6 +47,10 @@ Observations with missing data (NA) are removed automatically and a warning is i
 
 }
 
+\seealso{
+  \code{\link{profSimilarity}}
+}
+
 \examples{
 library(profdpm)
 
