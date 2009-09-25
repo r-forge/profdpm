@@ -153,8 +153,9 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
      
   // 2. m = (s)^(-1) * m
   // dgesv overwrites the matrix passed in. Hence, we must load s again
-  // when the call is finished. obj->fbuf holds some temporary data.
-  //  FIXME use dpbsv instead (for sym,pd matrices)
+  // when the call is finished. If this could be avoided, would save some time
+  // obj->fbuf holds some temporary data.
+  //  FIXME use dpbsv instead (for sym,pd matrices), may be faster
   F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, (unsigned int *) obj->fbuf, m, &obj->q, &info);
   if( info > 0 ) { error("dgesv: system is singular"); }
   if( info < 0 ) { error("dgesv: invalid argument"); }
