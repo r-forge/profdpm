@@ -28,12 +28,12 @@
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
 #define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
-#define FLAG_PRICLUS  1<<2  // use a clustering prior instead of DP prior
-#define FLAG_EMPTY_3  1<<3
-#define FLAG_EMPTY_4  1<<4
-#define FLAG_EMPTY_5  1<<5
-#define FLAG_EMPTY_6  1<<6
-#define FLAG_EMPTY_7  1<<7
+#define FLAG_PRICLUS  1<<2  // use Cluster prior instead of Dirichlet prior
+#define FLAG_EMPTY_3  1<<3  // not used
+#define FLAG_EMPTY_4  1<<4  // not used
+#define FLAG_EMPTY_5  1<<5  // not used
+#define FLAG_EMPTY_6  1<<6  // not used
+#define FLAG_EMPTY_7  1<<7  // not used
 
 
 typedef struct {
@@ -109,10 +109,10 @@ double       pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 unsigned int pdpmlm_free( pdpmlm_t * obj );
 
 // Try to split cluster cls
-double         pdpmlm_split( pdpmlm_t * obj, unsigned int cls );
+double       pdpmlm_split( pdpmlm_t * obj, unsigned int cls );
 
 // Try to merge cluster cls
-double         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
+double       pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
 
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
