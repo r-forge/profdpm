@@ -11,6 +11,9 @@
 #include "util.h"
 
 // The following should be changed if ported to another interface
+// In addition, allocated memory may need to be freed if ported to
+// another interface. This is not necessary if allocated using R's
+// memory manager.
 #define pdpmlm_alloc(count, size)  R_alloc(count, size)
 #define pdpmlm_printf Rprintf
 

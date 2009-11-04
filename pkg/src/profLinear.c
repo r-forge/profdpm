@@ -189,7 +189,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
     pdpmlm_printf( "final allocated memory: %fMb\n", obj->mem/1000000.0 );
   }
 
-
+  //10. complete the return value
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a
   SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->ncl)); //b
   SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->ncl)); //m

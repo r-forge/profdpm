@@ -2,6 +2,17 @@
 #include <Rinternals.h>
 #include <Rmath.h>
 
+/*
+   This function computes the Rand statistic for two 
+   vectors of integers. The computing time of this 
+   function increases with the square of the length
+   of the two vectors. The use of bitwise comparrisons
+   significantly improves performance.
+
+   Rand, W. (1971). Objective Criteria for the Evaluation
+   of Clustering Methods. JASA 66:846-850.
+ */
+
 SEXP profSimilarity( SEXP c1, SEXP c2 ) {
   unsigned int i, j, tot = 0, con = 0;
   unsigned int *v1 = INTEGER( c1 ), *v2 = INTEGER( c2 );
