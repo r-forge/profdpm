@@ -3,10 +3,10 @@
 #include <Rmath.h>
 
 /*
-   This function computes the Rand statistic for two 
-   vectors of integers. The computing time of this 
-   function increases with the square of the length
-   of the two vectors. The use of bitwise comparrisons
+   The profSimilarity function computes the Rand statistic
+   for two vectors of integers. The computing time of this 
+   function increases with the square of the length of the 
+   two vectors. The use of bitwise comparrisons
    significantly improves performance.
 
    Rand, W. (1971). Objective Criteria for the Evaluation
