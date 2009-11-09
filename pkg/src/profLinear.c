@@ -8,9 +8,8 @@
 SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
   SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
-  unsigned int i, j, k, cls, onei=1;
-  double s, m, a, b; 
-  double *xp, *yp, oned=1.0, zerod=0.0;
+  int i, j, k, cls, onei=1; 
+  double *xp, *yp, oned=1.0;
 
   //0. setup the return value 
   PROTECT(retval = allocVector(VECSXP, 9));
@@ -44,7 +43,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   if( INTEGER(prior)[0] == 1 ) { obj->flags |= FLAG_PRICLUS; }
   obj->y     = REAL(y);
   obj->x     = REAL(x);
-  obj->vgr   = INTEGER(group);
+  obj->vgr   = (unsigned int *) INTEGER(group);
   dim        = getAttrib(x, R_DimSymbol); 
   obj->p     = INTEGER(dim)[ 1 ];
   obj->q     = INTEGER(dim)[ 0 ];

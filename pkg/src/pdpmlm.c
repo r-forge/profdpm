@@ -134,8 +134,8 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
 
 
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
-  unsigned int i, j, d, ione=1, inf, info;
-  double *x, *y, done=1.0, dzero=0.0;
+  int i, j, d, ione=1, info;
+  double done=1.0, dzero=0.0;
 
   if( obj->pcl[ cls ] == 0 ) { return; }
 
@@ -157,7 +157,7 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // obj->fbuf holds some temporary data.
   // FIXME use dpbsv instead (for sym,pd matrices), may be faster
   // FIXME do not 'error' here
-  F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, (unsigned int *) obj->fbuf, m, &obj->q, &info);
+  F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, (int *) obj->fbuf, m, &obj->q, &info);
   if( info > 0 ) { error("dgesv: system is singular"); }
   if( info < 0 ) { error("dgesv: invalid argument"); }
 
@@ -228,7 +228,7 @@ double pdpmlm_split( pdpmlm_t * obj, unsigned int cls ) {
   
 double pdpmlm_merge( pdpmlm_t * obj, unsigned int cls ) {
   unsigned int grp = 0, testgrp, testcls, currcls = cls, bestcls = cls, size;
-  double beflogpcls, aftlogpcls, del, bestdel = 0;
+  double del, bestdel = 0;
 
   //0. cannot merge an empty group
   if( obj->pcl[ cls ] == 0 ) { return 0.0; }
@@ -271,34 +271,6 @@ double pdpmlm_merge( pdpmlm_t * obj, unsigned int cls ) {
     }
   }
   return bestdel;
-}
-
-void pdpmlm_away( pdpmlm_t * obj, unsigned int grp ) {
-  unsigned int i, test_cls, old_cls, best_cls;
-  double test_delp=0, best_delp=0;
-
-  old_cls = obj->vcl[ grp ];
-
-  if( grp >= obj->ngr ) { error( "pdpmlm_away: invalid argument" ); }
-
-  if( obj->pcl[ best_cls ] > obj->pgr[ grp ] ) {
-    best_cls = pdpmlm_free( obj );
-    if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
-    best_delp = pdpmlm_movep( obj, grp, best_cls );
-  }
-
-  test_cls = 0;
-  for( i = 0; i < obj->ncl; i++ ) {
-    while( obj->pcl[ test_cls ] == 0 ) { test_cls++; }
-    test_delp += pdpmlm_movep( obj, grp, test_cls );
-    if( test_delp > best_delp && test_cls != old_cls) { 
-      best_delp = test_delp;
-      best_cls  = test_cls;
-    }
-    test_cls++;
-  }
-
-  if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
 }
 
 void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
@@ -350,7 +322,7 @@ void pdpmlm_spmer( pdpmlm_t * obj, unsigned int itermax, double crit) {
 }
   
 void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
-  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls, spmercnt;
+  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls;
   double logp_old, logp, pdel = 1, pcum = 0, prop;
 
   // 0. allocate memory for vcl_old, grps

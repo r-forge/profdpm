@@ -117,9 +117,6 @@ double       pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
 
-// Move an observation/group to the cluster that minimizes the logp, excluding the current cluster
-void         pdpmlm_away( pdpmlm_t * obj, unsigned int grp );
-
 // Compute the posterior parameters s, m, a, and b for a given cluster
 void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
 
