@@ -136,11 +136,11 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   for( i = 0; i < obj->p; i++ ) {
        xp = obj->x + i*obj->q;
        yp = obj->y + i;
-       F77_CALL(dgemm)("N","T",
-                      &obj->q,&obj->q,&onei,&oned,
-                      xp,&obj->q,xp,&obj->q,
-                      &oned,obj->xxgr[ obj->vgr[ i ] ],&obj->q); 
-       F77_CALL(daxpy)(&obj->q, yp, xp, &onei, obj->xygr[ obj->vgr[ i ] ], &onei); 
+       F77_CALL(dgemm)("N", "T",
+                      (int *) &obj->q, (int *) &obj->q, &onei, &oned,
+                      xp, (int *) &obj->q, xp, (int *) &obj->q,
+                      &oned, obj->xxgr[ obj->vgr[ i ] ], (int *) &obj->q); 
+       F77_CALL(daxpy)((int *) &obj->q, yp, xp, &onei, obj->xygr[ obj->vgr[ i ] ], &onei); 
        obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
   }
   

@@ -157,7 +157,8 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // obj->fbuf holds some temporary data.
   // FIXME use dpbsv instead (for sym,pd matrices), may be faster
   // FIXME do not 'error' here
-  F77_CALL(dgesv)(&obj->q, &ione, s, &obj->q, (int *) obj->fbuf, m, &obj->q, &info);
+  F77_CALL(dgesv)((int *) &obj->q, &ione, s, (int *) &obj->q,
+                  (int *) obj->fbuf, m, (int *) &obj->q, &info);
   if( info > 0 ) { error("dgesv: system is singular"); }
   if( info < 0 ) { error("dgesv: invalid argument"); }
 
@@ -172,9 +173,10 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
   // 4. b = y'y + s0*m0'm0 - m'sm
   *b = obj->yycl[ cls ]; // b = y'y
-  *b += obj->s0*F77_CALL(ddot)(&obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
-  F77_CALL(dgemv)( "N", &obj->q, &obj->q, &done, s, &obj->q, m, &ione, &dzero, obj->fbuf, &ione );  // obj->fbuf = s*m
-  *b -= F77_CALL(ddot)( &obj->q, m, &ione, obj->fbuf, &ione ); // b -= m'obj->fbuf
+  *b += obj->s0*F77_CALL(ddot)( (int *) &obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
+  F77_CALL(dgemv)( "N", (int *) &obj->q, (int *) &obj->q, &done, s, (int *) &obj->q,
+                    m, &ione, &dzero, obj->fbuf, &ione );  // obj->fbuf = s*m
+  *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione ); // b -= m'obj->fbuf
  
 
   // 5. a = a0 + nk;
