@@ -35,7 +35,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
 
 <table border="0" width="100%" cellspacing="0" cellpadding="0">
 <tr><td>
-<a href="profdpmLogo.png" border="0" alt="profdpm Logo" /> </a> </td> </tr>
+<img src="profdpmLogo.png" border="0" alt="profdpm Logo" /> </td> </tr>
 </table>
 
 
