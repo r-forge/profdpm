@@ -192,7 +192,7 @@ unsigned int pdpmlm_free( pdpmlm_t * obj ) {
 
 double pdpmlm_split( pdpmlm_t * obj, unsigned int cls ) {
   unsigned int grp = 0, testgrp, bestgrp, new, size; 
-  double testdel, bestdel = DBL_MIN, del = 0.0;
+  double testdel, bestdel = -DBL_MAX, del = 0.0;
  
   if( obj->pcl[ cls ] < 2 ) { return 0.0; }
   size = obj->pcl[ cls ];
