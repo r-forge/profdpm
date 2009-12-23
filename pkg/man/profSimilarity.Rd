@@ -20,7 +20,7 @@
 }
 
 \details{
-  This function computes the similarity between two instances of the \sQuote{profLinear} class. The two instances should be the result of two independant calls to the function \sQuote{profLinear} with the same dataset. If observation \eqn{ latex }{ k } is clustered together with observation \eqn{ latex }{ j } in both \sQuote{p1} and \sQuote{p2}, then this constitutes an equivalent clustering. Hence, there are \eqn{ latex }{ n(n-1)/2 } possible equivalent clusterings, where \eqn{ latex }{ n } is the number of clustered observations in \sQuote{p1} and \sQuote{p2}. The metric is computed as the number of equivalent clusterings divided by the number possible equivalent clusterings. See Rand (1971) for additional details.
+  This function computes the similarity between two instances of the \sQuote{profLinear} class. The two instances should be the result of two independant calls to the function \sQuote{profLinear} with the same dataset. If observation \eqn{ k }{ k } is clustered together with observation \eqn{ j }{ j } in both \sQuote{p1} and \sQuote{p2}, then this constitutes an equivalent clustering. Hence, there are \eqn{ n(n-1)/2 }{ n(n-1)/2 } possible equivalent clusterings, where \eqn{ n }{ n } is the number of clustered observations in \sQuote{p1} and \sQuote{p2}. The metric is computed as the number of equivalent clusterings divided by the number possible equivalent clusterings. See Rand (1971) for additional details.
 }
 
 \references{
