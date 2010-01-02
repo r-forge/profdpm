@@ -3,7 +3,7 @@
 #include <Rmath.h>
 
 /*
-   The profSimilarity function computes the Rand statistic
+   The Rand function computes the Rand statistic
    for two vectors of integers. The computing time of this 
    function increases with the square of the length of the 
    two vectors. The use of bitwise comparrisons
@@ -13,7 +13,7 @@
    of Clustering Methods. JASA 66:846-850.
  */
 
-SEXP profSimilarity( SEXP c1, SEXP c2 ) {
+SEXP Rand( SEXP c1, SEXP c2 ) {
   unsigned int i, j, tot = 0, con = 0;
   unsigned int *v1 = (unsigned int *) INTEGER( c1 ), *v2 = (unsigned int *) INTEGER( c2 );
   SEXP ret;

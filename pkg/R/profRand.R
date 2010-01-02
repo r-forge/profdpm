@@ -1,4 +1,4 @@
-profSimilarity <- function( p1, p2 ) {
+profRand <- function( p1, p2 ) {
   ###################################################
   #do some argument checking
   if( !( "profLinear" %in% is( p1 ) ) ) { stop("p1 not of class \'profLinear\'") }
@@ -9,6 +9,6 @@ profSimilarity <- function( p1, p2 ) {
 
   uni1 <- unique( cbind( p1$group, p1$clust ) )[,2]
   uni2 <- unique( cbind( p2$group, p2$clust ) )[,2]
-  ret <- .Call("profSimilarity", as.integer(uni1), as.integer(uni2), PACKAGE="profdpm")
+  ret <- .Call("Rand", as.integer(uni1), as.integer(uni2), PACKAGE="profdpm")
   return( ret )
 }

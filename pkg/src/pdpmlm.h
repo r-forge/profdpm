@@ -82,6 +82,8 @@ double        * m;      // storage for an m vector (qx1)
 double          a;      // storage for an a scalar
 double          b;      // storage for an b scalar
 
+double          logp;   // log posterior value
+
 double        * fbuf;   // temporary storage for fortran routines (qx1)
 unsigned int  * pbuf;   // temporary storage for pdpmlm routines (ngrx1)
 unsigned int    mem;    // memory usage counter
@@ -105,14 +107,26 @@ void         pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 // Move an observation/group to cluster cls, return the resulting change in logp
 double       pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
-// Get the index of an free (empty) cluster of BAD_CLS if none exist
+// Get the index of an empty cluster, or BAD_CLS if none exist
 unsigned int pdpmlm_free( pdpmlm_t * obj );
 
+// Compute the change in logp that would result from a merge of cls1 and cls2
+double       pdpmlm_testmergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 );
+ 
+// Merge cluster cls1 into cls2 and return the resulting change in logp
+double       pdpmlm_mergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 );
+ 
+// Merge cluster cls1 into cls2
+void         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 );
+
+// Perform agglomerative clustering
+void         pdpmlm_agglo( pdpmlm_t * obj );
+
 // Try to split cluster cls
-double       pdpmlm_split( pdpmlm_t * obj, unsigned int cls );
+double       pdpmlm_splitbest( pdpmlm_t * obj, unsigned int cls );
 
 // Try to merge cluster cls
-double       pdpmlm_merge( pdpmlm_t * obj, unsigned int cls );
+double       pdpmlm_mergebest( pdpmlm_t * obj, unsigned int cls );
 
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
@@ -125,9 +139,6 @@ double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );
 
 // Compute the log posterior value for the model 
 double       pdpmlm_logp( pdpmlm_t * obj );
-
-// Perform split merge style optimization
-void         pdpmlm_spmer( pdpmlm_t * obj, unsigned int itermax, double crit);
 
 // Perform chunk style optimization
 void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit);

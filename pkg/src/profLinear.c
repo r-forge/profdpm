@@ -12,8 +12,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   double *xp, *yp, oned=1.0;
 
   //0. setup the return value 
-  PROTECT(retval = allocVector(VECSXP, 9));
-  PROTECT(names = allocVector(STRSXP, 9));
+  PROTECT(retval = allocVector(VECSXP, 10));
+  PROTECT(names = allocVector(STRSXP, 10));
   PROTECT(class = allocVector(STRSXP, 1));
   PROTECT(clust = allocVector(INTSXP, LENGTH(y)));
   SET_STRING_ELT(names, 0, mkChar("y"));
@@ -25,6 +25,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   SET_STRING_ELT(names, 6, mkChar("b"));
   SET_STRING_ELT(names, 7, mkChar("m"));
   SET_STRING_ELT(names, 8, mkChar("s"));
+  SET_STRING_ELT(names, 9, mkChar("logp"));
   SET_STRING_ELT(class, 0, mkChar("profLinear"));
   setAttrib(retval, R_NamesSymbol, names);
   setAttrib(retval, R_ClassSymbol, class);
@@ -180,9 +181,10 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
     pdpmlm_printf( "initial allocated memory: %fMb\n", obj->mem/1000000.0 );
     pdpmlm_printf( "optimization started\n" );
   }
+
   pdpmlm_divy( obj );
   pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
-  //pdpmlm_spmer( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "optimization complete\n" ); 
     pdpmlm_printf( "final allocated memory: %fMb\n", obj->mem/1000000.0 );
@@ -193,8 +195,16 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   SET_VECTOR_ELT(retval, 6, allocVector(REALSXP, obj->ncl)); //b
   SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->ncl)); //m
   SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->ncl)); //s
+  SET_VECTOR_ELT(retval, 9, allocVector(REALSXP, 1)); //logp
+  REAL(VECTOR_ELT(retval, 9))[0] = obj->logp;
+
+  for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_CLS; }
+  cls = 1;
   for( i = 0; i < obj->p; i++ ) { 
-    INTEGER(VECTOR_ELT(retval, 4))[i] = obj->vcl[ obj->vgr[ i ] ]; 
+    if( obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] == BAD_CLS ) { 
+      obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] = cls++;
+    }
+    INTEGER(VECTOR_ELT(retval, 4))[i] = obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ];
   }
   cls = 0;
   for( i = 0; i < obj->ncl; i++) {

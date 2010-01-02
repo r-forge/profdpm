@@ -1,13 +1,13 @@
-\name{profSimilarity}
-\alias{profSimilarity}
-\title{Similarity Between Two Instances of the Class profLinear}
+\name{profRand}
+\alias{profRand}
+\title{The Rand Statistic Between Two Instances of the Class profLinear}
 
 \description{
   This function computes the Rand statistic (1971), a metric that quantifies the similarity between two instances of the class \sQuote{profLinear}.
 }
 
 \usage{
-  profSimilarity(p1, p2)
+  profRand(p1, p2)
 }
 
 \arguments{

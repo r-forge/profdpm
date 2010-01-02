@@ -32,6 +32,7 @@
   \item{b}{a numeric vector containing the posterior parameter \eqn{ b_k }{ b_k } for each cluster}
   \item{m}{a list of numeric vectors containing the posterior parameter \eqn{ m_k }{ m_k } for each cluster}
   \item{s}{a list of numeric matrices containing the posterior parameter \eqn{ s_k }{ s_k } for each cluster}
+  \item{logp}{the log value of the marginal posterior mass function for the cluster partition evaluated at \sQuote{clust}}
 }
 
 \details{
@@ -48,7 +49,7 @@ Observations with missing data (NA) are removed automatically and a warning is i
 }
 
 \seealso{
-  \code{\link{profSimilarity}}
+  \code{\link{profRand}}
 }
 
 \examples{

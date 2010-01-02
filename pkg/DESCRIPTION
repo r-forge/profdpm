@@ -5,6 +5,6 @@ Version: 1.0
 Date: 2009-04-09
 Author: Matt Shotwell
 Maintainer: Matt Shotwell <shotwelm@musc.edu>
-Description: This package performs profile inference for models utilizing the Dirichlet process (DP) and Dirichlet motivated process (DMP) mixtures. This method is not based on Markov chain Monte Carlo methods, as are most other mechanisms of inference in DP and DMP mixtures. This method searches for the maximum posterior (MAP) estimate for the cluster indicators in the DP or DMP mixture model.
+Description: This package performs profile inference for a class of product partition models (PPM). The Dirichlet process mixture is a specific case in this class of PPMs. This method searches for the maximum posterior (MAP) estimate for the cluster partition in the PPM.
 License: GPL
 LazyLoad: yes
