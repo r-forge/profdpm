@@ -209,18 +209,18 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   cls = 0;
   for( i = 0; i < obj->ncl; i++) {
     while( obj->pcl[ cls ] == 0 ) { cls++; }
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 8), i, allocVector(REALSXP, obj->q*obj->q));
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 7), i, allocVector(REALSXP, obj->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1, allocVector(REALSXP, obj->q*obj->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1, allocVector(REALSXP, obj->q));
     PROTECT(dim = allocVector(INTSXP, 2));
     INTEGER(dim)[0] = obj->q;
     INTEGER(dim)[1] = obj->q;
-    setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), i), R_DimSymbol, dim);
+    setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1), R_DimSymbol, dim);
 
     pdpmlm_parm( obj, cls,
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), i)),
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), i)),
-        REAL(VECTOR_ELT(retval, 5))+i,
-        REAL(VECTOR_ELT(retval, 6))+i
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1)),
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1)),
+        REAL(VECTOR_ELT(retval, 5))+obj->pbuf[ cls ]-1,
+        REAL(VECTOR_ELT(retval, 6))+obj->pbuf[ cls ]-1
     );
     cls++;
   }
