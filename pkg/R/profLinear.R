@@ -1,4 +1,4 @@
-profLinear <- function(y, x, group, param, maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
+profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { stop("y must be numeric") }
@@ -7,6 +7,7 @@ profLinear <- function(y, x, group, param, maxiter=1000, crit=1e-5, prior="Diric
   if(length(y) != length(group)) { stop("length(y) must equal length(group)") }
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
   if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
+  if(!is.numeric(stop)) { stop("stop must be numeric") }
 
   ###################################################
   #remove missing observations, issue warning
@@ -44,8 +45,21 @@ profLinear <- function(y, x, group, param, maxiter=1000, crit=1e-5, prior="Diric
   }
 
   ###################################################
+  #convert method to integer
+  if( method == "Shotwell" ) { method <- 0 }
+  else if( method == "agglomerative" ) { method <- 1 }
+  else {
+    method <- 0
+    warning("method must be \'Shotwell\' or \'agglomerative\'")
+  }
+
+  ###################################################
+  #convert stop to integer
+  if( is.logical(stop) ) { stop <- -1 }
+
+  ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, as.list(param), as.integer(maxiter), as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, as.list(param), as.integer(method), as.integer(stop), as.integer(maxiter), as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering

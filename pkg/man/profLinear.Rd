@@ -7,7 +7,8 @@
 }
 
 \usage{
-  profLinear(y, x, group, param, maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE)
+  profLinear(y, x, group, param, method="Shotwell", stop=FALSE,
+             maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE)
 }
 
 \arguments{
@@ -15,6 +16,8 @@
   \item{x}{a numeric matrix of covariates.}
   \item{group}{an optional vector of factors (or coercible to factors) indicating grouping among observations. Observations that are grouped will be clustered together. This is useful if several observations form a single longitudinal observation.}
   \item{param}{an optional list containing the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in x.}
+  \item{method}{a character string indicating the optimization method to be used. Meaningful values for this string are \sQuote{Shotwell} (default) and \sQuote{agglomerative}}
+  \item{stop}{either the logical FALSE (default), or a positive integer specifying the iteration at which the optimization algorithm should stop.}
   \item{maxiter}{an integer value specifying the maximum number of iterations for the optimization algorithm.}
   \item{crit}{a numeric scalar constituting a 'stopping criterion' for the optimization algorithm.}
   \item{prior}{a character string indicating the type of prior to be used for the clustering indicators. Meaningful values for this string are \sQuote{Dirichlet} (default) and \sQuote{cluster}. }

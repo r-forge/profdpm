@@ -28,8 +28,8 @@
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
 #define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
-#define FLAG_PRICLUS  1<<2  // use Cluster prior instead of Dirichlet prior
-#define FLAG_EMPTY_3  1<<3  // not used
+#define FLAG_OPTSTOP  1<<2  // a stopping iteration has been specified
+#define FLAG_PRICLUS  1<<3  // use cluster prior instead of Dirichlet prior
 #define FLAG_EMPTY_4  1<<4  // not used
 #define FLAG_EMPTY_5  1<<5  // not used
 #define FLAG_EMPTY_6  1<<6  // not used
@@ -120,7 +120,7 @@ double       pdpmlm_mergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2
 void         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 );
 
 // Perform agglomerative clustering
-void         pdpmlm_agglo( pdpmlm_t * obj );
+void         pdpmlm_agglo( pdpmlm_t * obj, int stop );
 
 // Try to split cluster cls
 double       pdpmlm_splitbest( pdpmlm_t * obj, unsigned int cls );
@@ -141,5 +141,5 @@ double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );
 double       pdpmlm_logp( pdpmlm_t * obj );
 
 // Perform chunk style optimization
-void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit);
+void         pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit );
 #endif

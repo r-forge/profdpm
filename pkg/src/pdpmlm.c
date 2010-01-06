@@ -465,7 +465,7 @@ double pdpmlm_testmergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 )
   return del;
 }
 
-void pdpmlm_agglo( pdpmlm_t * obj ) {
+void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
   //delp[ i, j ] - change in logp by merging cluster j with i, stored as a lower
   //triangular matrix with ( ngr * ( ngr - 1 ) / 2 ) items. The value is accessed
   //via array according to the following.
@@ -477,7 +477,6 @@ void pdpmlm_agglo( pdpmlm_t * obj ) {
   unsigned int   icls_last = BAD_CLS, jcls_last = BAD_CLS;
   int calcs = 0, calcs_cent = obj->ngr * ( obj->ngr - 1 ) + 1;
   calcs_cent = calcs_cent > 100 ? calcs_cent / 100 : 1;
-
 
   //0. allocate some additional memory
   delp = (double *) R_alloc( ( obj->ngr * ( obj->ngr - 1 ) / 2 ), sizeof( double ) );
@@ -493,6 +492,9 @@ void pdpmlm_agglo( pdpmlm_t * obj ) {
 
   // repeat until all clusters are merged into one
   while( obj->ncl > 1 ) {
+
+   // stop if required to by stop
+   if( ( obj->flags & FLAG_OPTSTOP > 0 ) && ( stop-- == 0 ) ) { break; }
 
     //2. update and record best delp among all pairs of clusters
     //testmerge all pairs at first loop (i.e. obj->ncl == obj->ngr)
@@ -538,14 +540,12 @@ void pdpmlm_agglo( pdpmlm_t * obj ) {
     }  
   }
 
-  if( (obj->flags & FLAG_VERBOSE) ) { pdpmlm_printf("\n"); }
-
+  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf("percent complete: 100%\n"); }
+  if( obj->flags & FLAG_OPTSTOP ) { return; }
   //5. cluster the groups according to the highest obtained logp
   obj->logp = logp_best;
   for( i = 0; i < obj->ngr; i++ ) {
     pdpmlm_move( obj, i, vcl_best[ i ] );
   }
-
-  //pdpmlm_printf( "logp_best: %f logp: %f\n", logp_best, pdpmlm_logp( obj ) ); 
 }
 

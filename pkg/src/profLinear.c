@@ -5,7 +5,7 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
   SEXP retval, elem, names, class, clust, dim;
   pdpmlm_t * obj;
   int i, j, k, cls, onei=1; 
@@ -42,6 +42,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
   obj->flags   = 0;
   if( LOGICAL(verbose)[0] ) { obj->flags |= FLAG_VERBOSE; }
   if( INTEGER(prior)[0] == 1 ) { obj->flags |= FLAG_PRICLUS; }
+  if( INTEGER(stop)[0] >= 0 ) { obj->flags |= FLAG_OPTSTOP; }
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = (unsigned int *) INTEGER(group);
@@ -181,9 +182,14 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP maxiter, SEXP crit,
     pdpmlm_printf( "initial allocated memory: %fMb\n", obj->mem/1000000.0 );
     pdpmlm_printf( "optimization started\n" );
   }
-
-  pdpmlm_divy( obj );
-  pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+ 
+  if( INTEGER(method)[0] == 1 ) { 
+    pdpmlm_agglo( obj, INTEGER(stop)[0] );
+  }
+  else {
+    pdpmlm_divy( obj );
+    pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+  }
 
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "optimization complete\n" ); 
