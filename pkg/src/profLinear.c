@@ -5,8 +5,8 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
-  SEXP retval, elem, names, class, clust, dim;
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP stop, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
+  SEXP retval, elem, names, class, dim;
   pdpmlm_t * obj;
   int i, j, k, cls, onei=1; 
   double *xp, *yp, oned=1.0;
@@ -15,7 +15,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, 
   PROTECT(retval = allocVector(VECSXP, 10));
   PROTECT(names = allocVector(STRSXP, 10));
   PROTECT(class = allocVector(STRSXP, 1));
-  PROTECT(clust = allocVector(INTSXP, LENGTH(y)));
   SET_STRING_ELT(names, 0, mkChar("y"));
   SET_STRING_ELT(names, 1, mkChar("x"));
   SET_STRING_ELT(names, 2, mkChar("group"));
@@ -33,7 +32,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, 
   SET_VECTOR_ELT(retval, 1, x);
   SET_VECTOR_ELT(retval, 2, group);
   SET_VECTOR_ELT(retval, 3, param);
-  SET_VECTOR_ELT(retval, 4, clust);
+  SET_VECTOR_ELT(retval, 4, allocVector(INTSXP, LENGTH(y)));
 
   //1. Allocate obj, make assignments, check priors
   obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
@@ -177,18 +176,30 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, 
   else { obj->mem += obj->ngr * sizeof(unsigned int); }
 
 
-  //9. distribute the clusters initially and perform optimization
+  //9. distribute clusters initially and perform optimization
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "initial allocated memory: %fMb\n", obj->mem/1000000.0 );
     pdpmlm_printf( "optimization started\n" );
   }
- 
-  if( INTEGER(method)[0] == 1 ) { 
-    pdpmlm_agglo( obj, INTEGER(stop)[0] );
+
+  if( isInteger(clust) ) {
+    i = 0;
+    for( j = 0; j < obj->ngr; j++ ) {
+      pdpmlm_add( obj, j, INTEGER(clust)[i] );
+      i += obj->pgr[ j ];
+    }
+  } 
+
+  if( INTEGER(method)[0] == 0 ) {
+    if( isLogical(clust) ) { pdpmlm_divy( obj ); }
   }
-  else {
-    pdpmlm_divy( obj );
+  else if( INTEGER(method)[0] == 1 ) {
+    if( isLogical(clust) ) { pdpmlm_divy( obj ); }
     pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+  }
+  else if( INTEGER(method)[0] == 2 ) {
+    if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } }
+    pdpmlm_agglo( obj, INTEGER(stop)[0] );
   }
 
   if( obj->flags & FLAG_VERBOSE ) {
@@ -202,7 +213,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, 
   SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->ncl)); //m
   SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->ncl)); //s
   SET_VECTOR_ELT(retval, 9, allocVector(REALSXP, 1)); //logp
-  REAL(VECTOR_ELT(retval, 9))[0] = obj->logp;
+  REAL(VECTOR_ELT(retval, 9))[0] = pdpmlm_logp( obj );
 
   for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_CLS; }
   cls = 1;
@@ -231,6 +242,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP param, SEXP method, SEXP stop, 
     cls++;
   }
 
-  UNPROTECT(4+obj->ncl);
+  UNPROTECT(3+obj->ncl);
   return(retval);
 }

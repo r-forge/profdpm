@@ -1,4 +1,5 @@
-profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
+profLinear <- function(y, x, group, clust, param, method="Shotwell", stop=FALSE,
+                       maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { stop("y must be numeric") }
@@ -7,7 +8,9 @@ profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxite
   if(length(y) != length(group)) { stop("length(y) must equal length(group)") }
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
   if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
-  if(!is.numeric(stop)) { stop("stop must be numeric") }
+  if(missing(clust)) { clust <- FALSE }
+  else { if(length(y) != length(clust)) { stop("length(y) must equal length(clust)") } }
+  if(!is.numeric(stop) & !(is.logical(stop) & stop==FALSE) ) { stop("stop must be FALSE or numeric") }
 
   ###################################################
   #remove missing observations, issue warning
@@ -15,6 +18,8 @@ profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxite
   ry <- y[!miss]
   rx <- x[!miss,]
   rg <- group[!miss]
+  if( is.logical(clust) ) { rc <- FALSE }
+  else{ rc <- clust[!miss] }
   if( any( miss ) ) {
     warning( "removed observations with missing values: ", paste(" ", (1:length(y))[miss], sep="") )
   }
@@ -22,18 +27,18 @@ profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxite
   ###################################################
   #order the data according to group
   #convert ordered y to double
+  #convert ordered group to integers from 0,1,...
+  #convert ordered clust to integers from 0,1,...
   rg <- factor(rg)
   ord <- order(rg)
   ry <- as.double(ry[ord])
+  rg <- as.integer(unclass(rg[ord])-1)
+  if( !is.logical(rc) ) { rc <- as.integer(unclass(rc[ord])-1) }
 
   ###################################################
   #transpose ordered x to simplify BLAS/LAPACK calls
   #matrices are double storage by column
   rx <- t(as.matrix(x[ord,]))
-
-  ###################################################
-  #convert ordered group to integers from 0,1,...
-  rg <- as.integer(unclass(rg[ord])-1)
 
   ###################################################
   #convert prior to integer
@@ -46,11 +51,12 @@ profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxite
 
   ###################################################
   #convert method to integer
-  if( method == "Shotwell" ) { method <- 0 }
-  else if( method == "agglomerative" ) { method <- 1 }
+  if( method == "none" ) { method <- 0 }
+  else if( method == "Shotwell" )      { method <- 1 }
+  else if( method == "agglomerative" ) { method <- 2 }
   else {
-    method <- 0
-    warning("method must be \'Shotwell\' or \'agglomerative\'")
+    method <- 1 #default is "Shotwell"
+    warning("method must be \'Shotwell\', \'agglomerative\', or \'none\'", )
   }
 
   ###################################################
@@ -59,7 +65,8 @@ profLinear <- function(y, x, group, param, method="Shotwell", stop=FALSE, maxite
 
   ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, as.list(param), as.integer(method), as.integer(stop), as.integer(maxiter), as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method), as.integer(stop), 
+                as.integer(maxiter), as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering

@@ -486,8 +486,7 @@ void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
   if( vcl_best == NULL ) {  Rprintf("vcl_best");memerror();}
   else { obj->mem += obj->ngr * sizeof( unsigned int ); }
 
-  //1. assign each grp to its own cls
-  for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } 
+  //1. compute initial logp 
   obj->logp = pdpmlm_logp( obj );  
 
   // repeat until all clusters are merged into one
@@ -540,7 +539,7 @@ void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
     }  
   }
 
-  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf("percent complete: 100%\n"); }
+  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf("\rpercent complete: 100%\n"); }
   if( obj->flags & FLAG_OPTSTOP ) { return; }
   //5. cluster the groups according to the highest obtained logp
   obj->logp = logp_best;
