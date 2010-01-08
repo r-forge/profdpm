@@ -9,7 +9,12 @@ profLinear <- function(y, x, group, clust, param, method="Shotwell", stop=FALSE,
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
   if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
   if(missing(clust)) { clust <- FALSE }
-  else { if(length(y) != length(clust)) { stop("length(y) must equal length(clust)") } }
+  else { 
+    if(length(y) != length(clust)) { stop("length(y) must equal length(clust)") } 
+    clust <- as.factor(clust)
+  }
+  
+  
   if(!is.numeric(stop) & !(is.logical(stop) & stop==FALSE) ) { stop("stop must be FALSE or numeric") }
 
   ###################################################
