@@ -1,4 +1,3 @@
-#include <math.h>
 #include <string.h>
 #include <Rinternals.h>
 
@@ -10,16 +9,6 @@
 
 /* stats */
 double lfactorial(unsigned int x);
-double factorial(unsigned int x);
-double mean(double * vec, unsigned int size);
-double sumsq(double * vec, unsigned int size);
-double stdev(double * vec, unsigned int size);
-
-/* string */
-void strip_all(char * str);
-void strip_front(char * str);
-void strip_rear(char * str);
-void strip_both(char * str); 
 
 /* R */
 SEXP getListElementByName(SEXP list, const char * name);

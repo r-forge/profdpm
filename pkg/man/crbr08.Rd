@@ -7,6 +7,12 @@
 }
 \usage{data(crbr08)}
 \format{A data frame with 29246 rows and 4 columns}
+\examples{
+  require(profdpm)
+  data(crbr08)
+  #histogram of overall finishing times (gun time)
+  hist(crbr08$gun,xlab="finishing time (min)", main="CRBR 08' Finishing Times")
+}
 \source{The Cooper River Bridge Run, 2008}
 \references{
  Cooper River Bridge Run Executive Committee (2008) 

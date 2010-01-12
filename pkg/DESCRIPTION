@@ -1,7 +1,7 @@
 Package: profdpm
 Type: Package
 Title: Profile Dirichlet Process Mixtures
-Version: 1.0
+Version: 1.1
 Date: 2009-04-09
 Author: Matt Shotwell
 Maintainer: Matt Shotwell <shotwelm@musc.edu>
