@@ -5,7 +5,7 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP verbose) {
   SEXP retval, elem, names, class, dim;
   pdpmlm_t * obj;
   int i, j, k, cls, onei=1; 
@@ -41,7 +41,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   //1.1 Set flags
   obj->flags   = 0;
   if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
-  if( INTEGER(prior)[0] == 1 ) { obj->flags |= FLAG_PRICLUS; }
 
   //1.2 Set pointers to data
   obj->y     = REAL(y);
@@ -52,6 +51,9 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->q     = INTEGER(dim)[ 0 ];
 
   //1.3 Check values in prior list
+  elem       = getListElementByName(param, "gamma");
+  if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; }
+  else { obj->gam = REAL(elem)[0]; }
   elem       = getListElementByName(param, "alpha");
   if( elem == R_NilValue ) {
     warning( "list item \"alpha\" missing from param, using default value" );

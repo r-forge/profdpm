@@ -7,8 +7,8 @@ This function finds the most probable cluster partition in a Dirichlet process m
 }
 
 \usage{
-profLinear(y, x, group, clust, param, method="stochastic", maxiter=1000, 
-           crit=1e-5, prior="Dirichlet", verbose=FALSE)
+profLinear(y, x, group, clust, param, method="stochastic",
+           maxiter=1000, crit=1e-5, verbose=FALSE)
 }
 
 \arguments{
@@ -16,7 +16,7 @@ profLinear(y, x, group, clust, param, method="stochastic", maxiter=1000,
 \item{x}{numeric matrix of covariates.}
 \item{group}{optional vector of factors (or coercible to factors) indicating grouping among observations. Observations that are grouped will be clustered together. This is useful if several values form a single longitudinal observation.}
 \item{clust}{optional vector of factors (or coercible to factors) indicating initial clustering among observations. Grouped observations (see \sQuote{group}) must have the same \sQuote{clust} value.}
-\item{param}{optional list containing the any of the named elements \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in \sQuote{x}.}
+\item{param}{optional list containing the any of the named elements \sQuote{gamma}, \sQuote{alpha}, \sQuote{a0}, \sQuote{b0}, \sQuote{m0}, and \sQuote{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \sQuote{m0} which should be a vector of length equal to the number of columns in \sQuote{x}.}
 \item{method}{character string indicating the optimization method to be used. Meaningful values for this string are \sQuote{stochastic} (default), \sQuote{agglomerative}, and \sQuote{none}. 
 
 The \sQuote{stochastic} method is still under investigation and may be unsuitable for some datasets. Optimization involves computing a moving average of the relative change in the marginal posterior distribution over the possible clusters after each iteration. The optimization stopping criterion is the minumim value this quantity can take before stopping the optimization cycle. If the optimization cycle reaches the maximum allowable iterations before meeting the stopping criterion, a warning is issued. Even if the optimization criterion is met, the resulting clusters may not represent the global maximum under the marginal posterior distribution over the possible clusters.
@@ -27,10 +27,6 @@ The \sQuote{none} method is typically used in conjunction with the \sQuote{clust
   }
 \item{maxiter}{integer value specifying the maximum number of iterations for the optimization algorithm.}
 \item{crit}{numeric scalar constituting a stopping criterion for the \sQuote{stochastic} optimization method.}
-\item{prior}{character string indicating the type of prior to be used for the clustering indicators. Meaningful values for this string are \sQuote{Dirichlet} (default) and \sQuote{cluster}. 
-
-The Dirichlet process mixture yields a natural prior distribution for the cluster indicators. By default, this \sQuote{Dirichlet} prior distribution is used. However, this prior tends to force observations into a small number of clusters with non-homogeneous sizes. In contrast, the \sQuote{cluster} prior distribution allows for more clusters and promotes homogeneity is cluster size.
-}
 \item{verbose}{logical value indicating whether the routine should be verbose in printing.}
 }
 
@@ -39,7 +35,7 @@ An instance of the class profLinear containing the following objects
 \item{y}{the numeric vector of observations, where missing observations (NA) are removed}
 \item{x}{the numeric matrix of covariates, where missing covariates (NA) are removed}
 \item{group}{the grouping vector, where missing group values (NA) are removed}
-\item{parm}{the list of prior parameters}
+\item{param}{the list of prior parameters}
 \item{clust}{a numeric vector of integers indicating cluster membership for each non-missing observation}
 \item{a}{a numeric vector containing the posterior parameter \eqn{ a_k }{ a_k } for each cluster}
 \item{b}{a numeric vector containing the posterior parameter \eqn{ b_k }{ b_k } for each cluster}

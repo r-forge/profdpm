@@ -1,5 +1,5 @@
 profLinear <- function(y, x, group, clust, param, method="stochastic", 
-                       maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
+                       maxiter=1000, crit=1e-5, verbose=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { stop("y must be numeric") }
@@ -47,28 +47,19 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   rx <- t(as.matrix(x[ord,]))
 
   ###################################################
-  #convert prior to integer
-  if( prior == "Dirichlet" ) { prior <- 0 }
-  else if( prior == "cluster" ) { prior <- 1 }
-  else{ 
-    prior <- 0
-    warning("prior must be \'Dirichlet\' or \'cluster\', using \'Dirichlet\'")  
-  }
-
-  ###################################################
   #convert method to integer
-  if( method == "none" ) { method <- 0 }
-  else if( method == "stochastic" )      { method <- 1 }
+  if(      method == "none" )          { method <- 0 }
+  else if( method == "stochastic" )    { method <- 1 }
   else if( method == "agglomerative" ) { method <- 2 }
   else {
-    method <- 1 #default is "Shotwell"
+    method <- 1 #default is "stochastic"
     warning("method must be \'stochastic\', \'agglomerative\', or \'none\'", )
   }
 
   ###################################################
   #call the C function
   ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method), as.integer(maxiter), 
-               as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
+               as.numeric(crit), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering

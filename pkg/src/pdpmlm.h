@@ -27,7 +27,7 @@
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
 #define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
-#define FLAG_PRICLUS  1<<2  // use cluster prior instead of Dirichlet prior
+#define FLAG_DIRICHL  1<<2  // use cluster Dirichlet prior
 #define FLAG_EMPTY_3  1<<3  // not used
 #define FLAG_EMPTY_4  1<<4  // not used
 #define FLAG_EMPTY_5  1<<5  // not used
@@ -42,6 +42,7 @@ typedef struct {
 
 unsigned char   flags;  // some options
 
+double          gam;  // prior gamma parameter
 double          alp;  // prior alpha parameter
 double          s0;   // prior s0 parameter
 double        * m0;   // prior m0 parameter

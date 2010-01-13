@@ -110,12 +110,12 @@ double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
   if( obj->pcl[ cls ] == 0 ) { return 0.0; }
   pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
   logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
-  // "cluster" form of prior - allows more similar sized groups
-  if( obj->flags & FLAG_PRICLUS ) { logp += log( obj->pcl[ cls ] ); }
-  // "Dirichlet" form of prior - promotes fewer groups of different size
-  else { logp += lfactorial( obj->pcl[ cls ] - 1 ); }
+  if( obj->flags & FLAG_DIRICHL ) { logp += lfactorial( obj->pcl[ cls ] - 1 ); }
+  else { logp += lfactorial( obj->pcl[ cls ] ) - obj->gam * lfactorial( obj->pcl[ cls ] - 1 ); }
   return logp;
 }
+
+
 
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls = 0;
