@@ -1,4 +1,4 @@
-profLinear <- function(y, x, group, clust, param, method="Shotwell", stop=FALSE,
+profLinear <- function(y, x, group, clust, param, method="stochastic", 
                        maxiter=1000, crit=1e-5, prior="Dirichlet", verbose=FALSE) {
   ###################################################
   #do some argument checking
@@ -7,15 +7,16 @@ profLinear <- function(y, x, group, clust, param, method="Shotwell", stop=FALSE,
   if(missing(group)) { group <- seq(1, length(y)) }
   if(length(y) != length(group)) { stop("length(y) must equal length(group)") }
   if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
-  if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
   if(missing(clust)) { clust <- FALSE }
   else { 
-    if(length(y) != length(clust)) { stop("length(y) must equal length(clust)") } 
     clust <- as.factor(clust)
+    if(length(y) != length(clust)) { stop("length(y) must equal length(clust)") } 
+    #check that group and clust do not conflict
+    for(grp in unique(group)) {
+      if( length(unique(clust[group==grp])) > 1 ) { stop("clust and group are conflicting") }
+    }
   }
-  
-  
-  if(!is.numeric(stop) & !(is.logical(stop) & stop==FALSE) ) { stop("stop must be FALSE or numeric") }
+  if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
 
   ###################################################
   #remove missing observations, issue warning
@@ -57,21 +58,17 @@ profLinear <- function(y, x, group, clust, param, method="Shotwell", stop=FALSE,
   ###################################################
   #convert method to integer
   if( method == "none" ) { method <- 0 }
-  else if( method == "Shotwell" )      { method <- 1 }
+  else if( method == "stochastic" )      { method <- 1 }
   else if( method == "agglomerative" ) { method <- 2 }
   else {
     method <- 1 #default is "Shotwell"
-    warning("method must be \'Shotwell\', \'agglomerative\', or \'none\'", )
+    warning("method must be \'stochastic\', \'agglomerative\', or \'none\'", )
   }
 
   ###################################################
-  #convert stop to integer
-  if( is.logical(stop) ) { stop <- -1 }
-
-  ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method), as.integer(stop), 
-                as.integer(maxiter), as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method), as.integer(maxiter), 
+               as.numeric(crit), as.integer(prior), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering

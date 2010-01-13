@@ -303,7 +303,7 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
 }
 
-void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
+void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls;
   double logp_old, logp, pdel = 1, pcum = 0;
 
@@ -312,7 +312,7 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
   grps    = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
   GetRNGstate();
-  while( iter++ < itermax ) {
+  while( maxiter-- != 0 ) {
   
     // 1. select the number of groups to shuffle
     ngrps = (unsigned int) floor( runif( 0.0, (double)obj->ngr ) );
@@ -462,7 +462,7 @@ double pdpmlm_testmergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 )
   return del;
 }
 
-void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
+void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
   //delp[ i, j ] - change in logp by merging cluster j with i, stored as a lower
   //triangular matrix with ( ngr * ( ngr - 1 ) / 2 ) items. The value is accessed
   //via array according to the following.
@@ -483,10 +483,7 @@ void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
   obj->logp = pdpmlm_logp( obj );  
 
   // repeat until all clusters are merged into one
-  while( obj->ncl > 1 ) {
-
-   // stop if required to by stop
-   if( ( obj->flags & FLAG_OPTSTOP ) && ( stop-- == 0 ) ) { break; }
+  while( obj->ncl > 1 && maxiter-- != 0 ) {
 
     //2. update and record best delp among all pairs of clusters
     //testmerge all pairs at first loop (i.e. obj->ncl == obj->ngr)
@@ -533,7 +530,6 @@ void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
   }
 
   if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf("\rpercent complete: 100%\n"); }
-  if( obj->flags & FLAG_OPTSTOP ) { return; }
   //5. cluster the groups according to the highest obtained logp
   obj->logp = logp_best;
   for( i = 0; i < obj->ngr; i++ ) {

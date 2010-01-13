@@ -7,8 +7,8 @@ profRand <- function( p1, p2 ) {
   if( length( p1$group) != length( p2$group ) ) { stop("p1 and p2 lengths differ") }
   if( !all.equal( p1$group, p2$group ) ) { stop("p1 and p2 groups differ") }
 
-  uni1 <- unique( cbind( p1$group, p1$clust ) )[,2]
-  uni2 <- unique( cbind( p2$group, p2$clust ) )[,2]
-  ret <- .Call("Rand", as.integer(uni1), as.integer(uni2), PACKAGE="profdpm")
+  u1 <- unique( cbind( p1$group, p1$clust ) )[,2]
+  u2 <- unique( cbind( p2$group, p2$clust ) )[,2]
+  ret <- .Call("Rand", as.integer(u1), as.integer(u2), PACKAGE="profdpm")
   return( ret )
 }

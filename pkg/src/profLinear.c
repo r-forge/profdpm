@@ -5,7 +5,7 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP stop, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP prior, SEXP verbose) {
   SEXP retval, elem, names, class, dim;
   pdpmlm_t * obj;
   int i, j, k, cls, onei=1; 
@@ -42,7 +42,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->flags   = 0;
   if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
   if( INTEGER(prior)[0] == 1 ) { obj->flags |= FLAG_PRICLUS; }
-  if( INTEGER(stop)[0] >= 0 )  { obj->flags |= FLAG_OPTSTOP; }
 
   //1.2 Set pointers to data
   obj->y     = REAL(y);
@@ -155,21 +154,16 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
     }
   } 
 
-  //method = "none"
-  if( INTEGER(method)[0] == 0 ) {
+  if( INTEGER(method)[0] == METHOD_NONE ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
   }
-  
-  //method = "Shotwell"
-  else if( INTEGER(method)[0] == 1 ) {
+  else if( INTEGER(method)[0] == METHOD_STOCH ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
-    pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+    pdpmlm_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
   }
-
-  //method = "agglomerative"
-  else if( INTEGER(method)[0] == 2 ) {
+  else if( INTEGER(method)[0] == METHOD_AGGLO ) {
     if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } }
-    pdpmlm_agglo( obj, INTEGER(stop)[0] );
+    pdpmlm_agglo( obj, INTEGER(maxiter)[0] );
   }
 
   if( obj->flags & FLAG_VERBOSE ) {
