@@ -14,7 +14,6 @@
 // In addition, allocated memory may need to be freed if ported to
 // another interface. This is not necessary if allocated using R's
 // memory manager.
-#define pdpmlm_alloc(count, size)  R_alloc(count, size)
 #define pdpmlm_printf Rprintf
 
 #define DEFAULT_ALP    1.000
@@ -47,61 +46,64 @@ double          a0;   // prior a0 parameter
 double          b0;   // prior b0 parameter
 
 // Each of the p entries in y has a corresponding entry in vgr
-// that indicates group membership. The values in vgr are begin
+// that indicates group membership. The values in vgr begin
 // at zero and are increasing. The largest value is ngr-1.
-// Hence, y and x are sorted before being passed to the C code.
-unsigned int  * vgr;  // group vector {0,0,...,ngr-1,ngr-1}
-unsigned int  * pgr;  // number in each group (ngr)
+// y and x are sorted before being passed to the C code such
+// that the values in vgr are in order
+unsigned int  * vgr;  // group vector (array of length p)
+unsigned int  * pgr;  // number in each group (array of length ngr)
 unsigned int    ngr;  // number of groups
 
 // Each of the ngr groups has an entry in vcl indicating
 // group membership. The group indicator is used to index
 // the values in vcl. Hence, 'vcl[ 0 ]' would yield the 
 // cluster indicator for group 0. The values in vcl may 
-// range from 0 to ncl-1, but must be less than or equal to
-// ngr-1. These values may not be ordered.
-unsigned int  * vcl;  // cluster vector {0,...,ncl-1} 
-unsigned int  * pcl;  // number in each cluster (ngr)
+// range from 0 to ngr-1. These values are not ordered,
+// and may not be continous. However, there will always 
+// only be ncl distinct values other than BAD_CLS.
+unsigned int  * vcl;  // cluster vector (array of length ngr)
+unsigned int  * pcl;  // number in each cluster (array of length ngr)
 unsigned int    ncl;  // number of clusters
 
-double        * y;    // y vector (px1)
-double        * x;    // x matrix (pxq)
+double        * y;    // y vector (array of length p)
+double        * x;    // x matrix (array of length p*q)
 unsigned int    p;    // nrow(x)
 unsigned int    q;    // ncol(x)
 
-double       ** xxgr;   // x'x matrix (qxq) for each group
-double       ** xygr;   // x'y vector (qx1) for each group
-double        * yygr;   // y'y scalar for each group
+double       ** xxgr;   // x'x matrix (array of ngr arrays of length q*q)
+double       ** xygr;   // x'y vector (array of ngr arrays of length q)
+double        * yygr;   // y'y scalar (array of length ngr)
 
-double       ** xxcl;   // x'x matrix (qxq) for each cluster
-double       ** xycl;   // x'y vector (qx1) for each cluster
-double        * yycl;   // y'y scalar for each cluster
+double       ** xxcl;   // x'x matrix (array of at least ncl arrays of length q*q)
+double       ** xycl;   // x'y matrix (array of at least ncl arrays of length q)
+double        * yycl;   // y'y scalar (array of at least length ncl)
 
-double        * s;      // storage for an s matrix (qxq)
-double        * m;      // storage for an m vector (qx1)
+double        * s;      // storage for an s matrix (array of length q*q)
+double        * m;      // storage for an m vector (array of length q)
 double          a;      // storage for an a scalar
 double          b;      // storage for an b scalar
 
 double          logp;   // log posterior value
 
-double        * fbuf;   // temporary storage for fortran routines (qx1)
-unsigned int  * pbuf;   // temporary storage for pdpmlm routines (ngrx1)
+double        * fbuf;   // temporary storage for fortran routines (array of length q)
+unsigned int  * pbuf;   // temporary storage for pdpmlm routines (array of length ngr)
 unsigned int    mem;    // memory usage counter
 
 } pdpmlm_t;
 
-void memerror(); 
+// Allocate memory and count usage in obj->mem
+void *       pdpmlm_alloc( pdpmlm_t * obj, unsigned int count, unsigned int size );
 
 // Assign the observations/groups according to a simple algorithm
 void         pdpmlm_divy( pdpmlm_t * obj );
 
 // Add an observation/group to a cluster cls
-void         pdpmlm_add( pdpmlm_t * obj, unsigned grp, unsigned int cls );
+void         pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
-// Remove an observation/group from cluster clt 
-void         pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls );
+// Remove an observation/group from cluster cls
+void         pdpmlm_sub( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
-// Move an observation/group to cluster clt
+// Move an observation/group to cluster cls, should only be called after pdpmlm_add
 void         pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls );
 
 // Move an observation/group to cluster cls, return the resulting change in logp

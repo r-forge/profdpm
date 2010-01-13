@@ -35,58 +35,57 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   SET_VECTOR_ELT(retval, 4, allocVector(INTSXP, LENGTH(y)));
 
   //1. Allocate obj, make assignments, check priors
-  obj = (pdpmlm_t *) pdpmlm_alloc( 1, sizeof(pdpmlm_t) );
-  if( obj == NULL ) { memerror(); }
-  else { obj->mem = sizeof(pdpmlm_t); }
+  obj = (pdpmlm_t *) R_alloc( 1, sizeof(pdpmlm_t) );
+  obj->mem = sizeof(pdpmlm_t);
+
+  //1.1 Set flags
   obj->flags   = 0;
-  if( LOGICAL(verbose)[0] ) { obj->flags |= FLAG_VERBOSE; }
+  if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
   if( INTEGER(prior)[0] == 1 ) { obj->flags |= FLAG_PRICLUS; }
-  if( INTEGER(stop)[0] >= 0 ) { obj->flags |= FLAG_OPTSTOP; }
+  if( INTEGER(stop)[0] >= 0 )  { obj->flags |= FLAG_OPTSTOP; }
+
+  //1.2 Set pointers to data
   obj->y     = REAL(y);
   obj->x     = REAL(x);
   obj->vgr   = (unsigned int *) INTEGER(group);
   dim        = getAttrib(x, R_DimSymbol); 
   obj->p     = INTEGER(dim)[ 1 ];
   obj->q     = INTEGER(dim)[ 0 ];
+
+  //1.3 Check values in prior list
   elem       = getListElementByName(param, "alpha");
   if( elem == R_NilValue ) {
     warning( "list item \"alpha\" missing from param, using default value" );
     obj->alp = DEFAULT_ALP;
-  } else { obj->alp = *(REAL(elem)); }
+  } else { obj->alp = REAL(elem)[0]; }
   elem       = getListElementByName(param, "s0");
   if( elem == R_NilValue ) {
     warning( "list item \"s0\" missing from param, using default value" );
     obj->s0 = DEFAULT_S0;
-  } else { obj->s0 = *(REAL(elem)); }
+  } else { obj->s0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "m0");
   if( elem == R_NilValue ) {
     warning( "list item \"m0\" missing from param, using default values" );
-    obj->m0 = (double *) pdpmlm_alloc( obj->q, sizeof(double) ); 
-    if( obj->m0 == NULL ) { memerror(); }
-    else { obj->mem += obj->q * sizeof(double); }
+    obj->m0 = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) ); 
     for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
   } else if ( LENGTH(elem) < obj->q ) {
     warning( "list item \"m0\" should be of length ncol(x), using default values" );
-    obj->m0 = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-    if( obj->m0 == NULL ) { memerror(); }
-    else { obj->mem += obj->q * sizeof(double); }
+    obj->m0 = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
     for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
   } else { obj->m0 = REAL(elem); }
   elem       = getListElementByName(param, "a0");
   if( elem == R_NilValue ) { 
     warning( "list item \"a0\" missing, using default value" );
     obj->a0 = DEFAULT_A0;
-  } else { obj->a0 = *(REAL(elem)); }
+  } else { obj->a0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "b0");
   if( elem == R_NilValue ) {
     warning( "list item \"b0\" missing, using default value" );
     obj->b0 = DEFAULT_B0;
-  } else { obj->b0 = *(REAL(elem)); }
+  } else { obj->b0 = REAL(elem)[0]; }
  
   //2. Allocate memory for pgr
-  obj->pgr = (unsigned int *) pdpmlm_alloc( obj->p, sizeof(unsigned int) );
-  if( obj->pgr == NULL ) { memerror(); }
-  else { obj->mem += obj->p * sizeof(unsigned int); }
+  obj->pgr = (unsigned int *) pdpmlm_alloc( obj, obj->p, sizeof(unsigned int) );
 
   //3. Compute pgr, ngr
   obj->ngr = 0;
@@ -96,34 +95,20 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
  
   //4. Allocate and zero memory vcl, pcl, ncl
   obj->ncl = 0;
-  obj->vcl = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof(unsigned int) );
-  if( obj->vcl == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(unsigned int); }
-  obj->pcl = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof(unsigned int) );
-  if( obj->pcl == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(unsigned int); }
+  obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
+  obj->pcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
   for( i = 0; i < obj->ngr; i++ ) { 
     obj->vcl[ i ] = BAD_CLS;
     obj->pcl[ i ] = 0; 
   }
 
   //5. Allocate and zero memory for xxgr xygr, and yygr
-  obj->xxgr = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
-  if( obj->xxgr == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(double *); }
-  obj->xygr = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
-  if( obj->xygr == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(double *); }
-  obj->yygr = (double *) pdpmlm_alloc( obj->ngr, sizeof(double) );
-  if( obj->yygr == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(double); }
+  obj->xxgr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
+  obj->xygr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
+  obj->yygr = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) {
-    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
-    if( obj->xxgr[ i ] == NULL ) { memerror(); }
-    else { obj->mem += obj->q * obj->q * sizeof(double); }
-    obj->xygr[i] = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-    if( obj->xygr[ i ] == NULL ) { memerror(); }
-    else { obj->mem += obj->q * sizeof(double); }
+    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj, obj->q * obj->q, sizeof(double) );
+    obj->xygr[ i ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
     obj->yygr[i] = 0.0;
     for( j = 0; j < obj->q; j++ ) {
       obj->xygr[ i ][ j ] = 0.0;
@@ -146,15 +131,9 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
   
   //7. allocate and zero xxcl, xycl, yycl
-  obj->xxcl = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
-  if( obj->xxcl == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(double *); }
-  obj->xycl = (double **) pdpmlm_alloc( obj->ngr, sizeof(double *) );
-  if( obj->xycl == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(double *); }
-  obj->yycl = (double *) pdpmlm_alloc( obj->ngr, sizeof(double) );
-  if( obj->yycl == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(double); }
+  obj->xxcl = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
+  obj->xycl = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
+  obj->yycl = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) {
     obj->xxcl[ i ] = NULL;
     obj->xycl[ i ] = NULL;
@@ -162,26 +141,12 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
 
   //8. allocate s, m, fbuf, and pbuf
-  obj->s = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
-  if( obj->s == NULL ) { memerror(); }
-  else { obj->mem += obj->q * obj->q * sizeof(double); }
-  obj->m = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-  if( obj->m == NULL ) { memerror(); }
-  else { obj->mem += obj->q * sizeof(double); }
-  obj->fbuf = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-  if( obj->fbuf == NULL ) { memerror(); }
-  else { obj->mem += obj->q * sizeof(double); }
-  obj->pbuf = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof(unsigned int) );
-  if( obj->pbuf == NULL ) { memerror(); }
-  else { obj->mem += obj->ngr * sizeof(unsigned int); }
-
+  obj->s = (double *) pdpmlm_alloc( obj, obj->q * obj->q, sizeof(double) );
+  obj->m = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
+  obj->fbuf = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
+  obj->pbuf = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
 
   //9. distribute clusters initially and perform optimization
-  if( obj->flags & FLAG_VERBOSE ) {
-    pdpmlm_printf( "initial allocated memory: %fMb\n", obj->mem/1000000.0 );
-    pdpmlm_printf( "optimization started\n" );
-  }
-
   if( isInteger(clust) ) {
     i = 0;
     for( j = 0; j < obj->ngr; j++ ) {
@@ -190,21 +155,25 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
     }
   } 
 
+  //method = "none"
   if( INTEGER(method)[0] == 0 ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
   }
+  
+  //method = "Shotwell"
   else if( INTEGER(method)[0] == 1 ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
     pdpmlm_chunk( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
   }
+
+  //method = "agglomerative"
   else if( INTEGER(method)[0] == 2 ) {
     if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } }
     pdpmlm_agglo( obj, INTEGER(stop)[0] );
   }
 
   if( obj->flags & FLAG_VERBOSE ) {
-    pdpmlm_printf( "optimization complete\n" ); 
-    pdpmlm_printf( "final allocated memory: %fMb\n", obj->mem/1000000.0 );
+    pdpmlm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
   }
 
   //10. complete the return value
@@ -243,5 +212,5 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
 
   UNPROTECT(3+obj->ncl);
-  return(retval);
+  return retval;
 }

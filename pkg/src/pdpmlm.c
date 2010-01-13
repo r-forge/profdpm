@@ -1,6 +1,9 @@
 #include "pdpmlm.h"
 
-void memerror() { error("failed to allocate memory"); }
+void * pdpmlm_alloc( pdpmlm_t * obj, unsigned int count, unsigned int size ) {
+  obj->mem += count * size;
+  return R_alloc( count, size );
+} 
 
 void pdpmlm_divy( pdpmlm_t * obj ) {
   unsigned int i, grp = 0, cls = 0, set = 0;
@@ -34,12 +37,8 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
 
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
-    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj->q * obj->q, sizeof(double) );
-    if( obj->xxcl[ cls ] == NULL ) { memerror(); }
-    else { obj->mem += obj->q * obj->q * sizeof(double); }
-    obj->xycl[ cls ] = (double *) pdpmlm_alloc( obj->q, sizeof(double) );
-    if( obj->xycl[ cls ] == NULL ) { memerror(); }
-    else { obj->mem += obj->q * sizeof(double); }
+    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q * obj->q, sizeof(double) );
+    obj->xycl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
     obj->yycl[ cls ] = 0.0;
     for( i = 0; i < obj->q; i++ ) {
       obj->xycl[ cls ][ i ] = 0.0;
@@ -309,10 +308,8 @@ void pdpmlm_chunk( pdpmlm_t * obj, unsigned int itermax, double crit) {
   double logp_old, logp, pdel = 1, pcum = 0;
 
   // 0. allocate memory for vcl_old, grps
-  vcl_old = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
-  if( vcl_old == NULL ) { memerror(); }
-  grps    = (unsigned int *) pdpmlm_alloc( obj->ngr, sizeof( unsigned int ) );
-  if( grps == NULL ) { memerror(); }
+  vcl_old = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
+  grps    = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
   GetRNGstate();
   while( iter++ < itermax ) {
@@ -479,12 +476,8 @@ void pdpmlm_agglo( pdpmlm_t * obj, int stop ) {
   calcs_cent = calcs_cent > 100 ? calcs_cent / 100 : 1;
 
   //0. allocate some additional memory
-  delp = (double *) R_alloc( ( obj->ngr * ( obj->ngr - 1 ) / 2 ), sizeof( double ) );
-  if( delp == NULL ) { Rprintf("delp");memerror(); }
-  else { obj->mem += ( obj->ngr * ( obj->ngr - 1 ) / 2 ) * sizeof( double ); }
-  vcl_best = (unsigned int *) R_alloc( obj->ngr, sizeof( unsigned int ) );
-  if( vcl_best == NULL ) {  Rprintf("vcl_best");memerror();}
-  else { obj->mem += obj->ngr * sizeof( unsigned int ); }
+  delp = (double *) pdpmlm_alloc( obj, ( obj->ngr * ( obj->ngr - 1 ) / 2 ), sizeof( double ) );
+  vcl_best = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
   //1. compute initial logp 
   obj->logp = pdpmlm_logp( obj );  
