@@ -50,7 +50,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->p     = INTEGER(dim)[ 1 ];
   obj->q     = INTEGER(dim)[ 0 ];
 
-  //1.3 Check values in prior list
+  //1.3 Check values in param list
   elem       = getListElementByName(param, "gamma");
   if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; }
   else { obj->gam = REAL(elem)[0]; }

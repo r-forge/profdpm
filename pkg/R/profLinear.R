@@ -2,21 +2,70 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
                        maxiter=1000, crit=1e-5, verbose=FALSE) {
   ###################################################
   #do some argument checking
-  if(!is.numeric(y)) { stop("y must be numeric") }
-  if(!is.matrix(x)|!is.numeric(x)) { stop("x must be a numeric matrix") }
-  if(missing(group)) { group <- seq(1, length(y)) }
-  if(length(y) != length(group)) { stop("length(y) must equal length(group)") }
-  if(length(y) != nrow(x)) { stop("length(y) must equal nrow(x)") }
-  if(missing(clust)) { clust <- FALSE }
+  if(!is.numeric(y)) { 
+    stop("y must be numeric") 
+  }
+  if(!is.matrix(x) | !is.numeric(x)) { 
+    stop("x must be a numeric matrix") 
+  }
+  if(missing(group)) { 
+    group <- seq(1, length(y)) 
+  }
+  else {
+    group <- as.factor(group)
+  }
+  if(length(y) != length(group)) { 
+    stop("length(y) must equal length(group)") 
+  }
+  if(length(y) != nrow(x)) {
+    stop("length(y) must equal nrow(x)") 
+  }
+  if(missing(clust)) { 
+    clust <- FALSE 
+  }
   else { 
     clust <- as.factor(clust)
-    if(length(y) != length(clust)) { stop("length(y) must equal length(clust)") } 
-    #check that group and clust do not conflict
+    if(length(y) != length(clust)) { 
+      stop("length(y) must equal length(clust)") 
+    } 
     for(grp in unique(group)) {
-      if( length(unique(clust[group==grp])) > 1 ) { stop("clust and group are conflicting") }
+      if( length(unique(clust[group==grp])) > 1 ) { 
+        stop("clust and group are conflicting") 
+      }
     }
   }
-  if(missing(param)) { param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) }
+  if(missing(param)) { 
+    param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) 
+  }
+  else if(!is.list(param)) {
+    warning("param must be a list, using defaults")
+    param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000)
+  } 
+  else{
+    if(length(names(param)) == 0) {
+      warning("param argument does not include any named items, using defaults")
+      param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000)
+    }
+    else if(length(param) > length(names(param))) {
+      warning("param contains unnamed items")
+    }
+  }
+  if(!is.character(method)) {
+    warning("method must be a character string, using default")
+    method <- "stochastic"
+  }
+  if(!is.numeric(maxiter) | maxiter < 0) {
+    warning("maxiter must be numeric and non-negative, using default")
+    maxiter <- 1000
+  }
+  if(!is.numeric(crit) | crit < 0) { 
+    warning("crit must be numeric and non-negative, using default") 
+    crit <- 1e-5
+  }
+  if(!is.logical(verbose)) {
+    warning("verbose must be a character string, using default")
+    verbose <- FALSE
+  }
 
   ###################################################
   #remove missing observations, issue warning
