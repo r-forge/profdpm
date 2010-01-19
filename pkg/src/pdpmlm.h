@@ -10,10 +10,6 @@
 #include <R_ext/Lapack.h>
 #include "util.h"
 
-// The following should be changed if ported to another interface
-// In addition, allocated memory may need to be freed if ported to
-// another interface. This is not necessary if allocated using R's
-// memory manager.
 #define pdpmlm_printf Rprintf
 
 #define DEFAULT_ALP    1.000
@@ -91,7 +87,7 @@ double          logp;   // log posterior value
 
 double        * fbuf;   // temporary storage for fortran routines (array of length q)
 unsigned int  * pbuf;   // temporary storage for pdpmlm routines (array of length ngr)
-unsigned int    mem;    // memory usage counter
+unsigned int    mem;    // memory usage counter (using sizeof)
 
 } pdpmlm_t;
 
@@ -125,15 +121,6 @@ double       pdpmlm_mergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2
 // Merge cluster cls1 into cls2
 void         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 );
 
-// Perform agglomerative optimization
-void         pdpmlm_agglo( pdpmlm_t * obj, int maxiter );
-
-// Try to split cluster cls
-double       pdpmlm_splitbest( pdpmlm_t * obj, unsigned int cls );
-
-// Try to merge cluster cls
-double       pdpmlm_mergebest( pdpmlm_t * obj, unsigned int cls );
-
 // Move an observation/group to the cluster that minimizes the logp
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
 
@@ -148,4 +135,8 @@ double       pdpmlm_logp( pdpmlm_t * obj );
 
 // Perform stochastic optimization
 void         pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit );
+
+// Perform agglomerative optimization
+void         pdpmlm_agglo( pdpmlm_t * obj, int maxiter );
+
 #endif

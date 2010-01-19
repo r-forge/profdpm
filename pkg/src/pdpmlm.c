@@ -151,7 +151,8 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // dgesv overwrites the matrix passed in. Hence, we must load s again
   // when the call is finished. If this could be avoided, would save some time
   // obj->fbuf holds some temporary data.
-  // FIXME use dpbsv instead (for sym,pd matrices), may be faster
+  // FIXME use dposv or dppsv instead (for sym,pd matrices), may be faster, latter requires changing
+  // all matrices to triangular packed storatge, rather than full storage
   // FIXME do not 'error' here (although I have never observed these errors)
   F77_CALL(dgesv)((int *) &obj->q, &ione, s, (int *) &obj->q,
                   (int *) obj->fbuf, m, (int *) &obj->q, &info);
@@ -168,11 +169,15 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   }
 
   // 4. b = y'y + s0*m0'm0 - m'sm
-  *b = obj->yycl[ cls ]; // b = y'y
-  *b += obj->s0*F77_CALL(ddot)( (int *) &obj->q, obj->m0, &ione, obj->m0, &ione);  // b += s0*m0'm0
+  // b = y'y
+  *b = obj->yycl[ cls ];   
+  // b += s0*m0'm0
+  *b += obj->s0*F77_CALL(ddot)( (int *) &obj->q, obj->m0, &ione, obj->m0, &ione);
+  // obj->fbuf = s*m 
   F77_CALL(dgemv)( "N", (int *) &obj->q, (int *) &obj->q, &done, s, (int *) &obj->q,
-                    m, &ione, &dzero, obj->fbuf, &ione );  // obj->fbuf = s*m
-  *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione ); // b -= m'obj->fbuf
+                    m, &ione, &dzero, obj->fbuf, &ione );
+  // b -= m'obj->fbuf
+  *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione );
  
 
   // 5. a = a0 + nk;
@@ -184,91 +189,6 @@ unsigned int pdpmlm_free( pdpmlm_t * obj ) {
   while( cls < obj->ngr && obj->pcl[ cls ] > 0 ) { cls++; }
   if( cls == obj->ngr ) { cls = BAD_CLS; }
   return cls;
-}
-
-double pdpmlm_splitbest( pdpmlm_t * obj, unsigned int cls ) {
-  unsigned int grp = 0, testgrp, bestgrp, new, size; 
-  double testdel, bestdel = -DBL_MAX, del = 0.0;
- 
-  if( obj->pcl[ cls ] < 2 ) { return 0.0; }
-  size = obj->pcl[ cls ];
-  new = pdpmlm_free( obj );
-
-  //0. enumerate groups in cls
-  for( testgrp = 0; testgrp < size; testgrp++ ) {
-    while( obj->vcl[ grp ] != cls ) { grp++; }
-    obj->pbuf[ testgrp ] = grp++;
-  }
- 
-  //1. find best group to move
-  for( testgrp = 0; testgrp < size; testgrp++ ) {
-    testdel = pdpmlm_movep( obj, obj->pbuf[ testgrp ], new );
-    if( testdel > bestdel ) { 
-      bestgrp = testgrp; 
-      bestdel = testdel;
-    }
-    else { pdpmlm_move( obj, obj->pbuf[ testgrp ], cls ); }
-  }
-
-  //2. try splitting the group starting with worst member
-  del += bestdel;
-  for( testgrp = 0; testgrp < size; testgrp++ ) {
-    testdel = pdpmlm_movep( obj, obj->pbuf[ testgrp ], new );
-    if( testdel < 0 ) { pdpmlm_move( obj, obj->pbuf[ testgrp ], cls ); }
-    else { del += testdel; }
-  }
- 
-  //3. if del < 0, merge new cluster (corrupts obj->pbuf)
-  if( del < 0 ) { del += pdpmlm_mergebest( obj, new ); }
-
-  return del;
-}
-  
-double pdpmlm_mergebest( pdpmlm_t * obj, unsigned int cls ) {
-  unsigned int grp = 0, testgrp, testcls, currcls = cls, bestcls = cls, size;
-  double del, bestdel = 0;
-
-  //0. cannot merge an empty group
-  if( obj->pcl[ cls ] == 0 ) { return 0.0; }
-  size = obj->pcl[ cls ];
-
-  //1. account for loss of cls in logp 
-  //del = log( obj->ncl ) - log( obj->alp );
-  //above would be mathematically correct, but not numerically
-  //since lfactorial is an approximation 
-  del = lfactorial( obj->ncl ) - lfactorial( obj->ncl - 1 ) - log( obj->alp );
-  
-  //2. enumerate groups in cls
-  for( testgrp = 0; testgrp < obj->pcl[ cls ]; testgrp++ ) {
-    while( obj->vcl[ grp ] != cls ) { grp++; }
-    obj->pbuf[ testgrp ] = grp++;
-  }
-  
-  //3. try merging with each other cluster
-  for( testcls = 0; testcls < obj->ngr; testcls++ ) {
-    if( obj->pcl[ testcls ] > 0 && testcls != cls ) {
-      del -= pdpmlm_logpcls( obj, currcls );
-      del -= pdpmlm_logpcls( obj, testcls );
-      for( testgrp = 0; testgrp < size; testgrp++ ) {
-        pdpmlm_move( obj, obj->pbuf[ testgrp ], testcls );
-      }
-      del += pdpmlm_logpcls( obj, currcls );
-      del += pdpmlm_logpcls( obj, testcls );
-      currcls = testcls;
-      if( del > bestdel ) {
-        bestcls = testcls;
-        bestdel = del;
-      }
-    }
-  }
-
-  //4. do final merge if necessary
-  if( obj->vcl[ obj->pbuf[ 0 ] ] != bestcls ) {
-    for( testgrp = 0; testgrp < size; testgrp++ ) {
-      pdpmlm_move( obj, obj->pbuf[ testgrp ], bestcls );
-    }
-  }
-  return bestdel;
 }
 
 void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
@@ -315,7 +235,7 @@ void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
   while( maxiter-- != 0 ) {
   
     // 1. select the number of groups to shuffle
-    ngrps = (unsigned int) floor( runif( 0.0, (double)obj->ngr ) );
+    ngrps = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
     ngrps = ngrps == 0 ? 1 : ngrps;
     
     // 2. randomly select ngrps groups to shuffle, save indicators
@@ -343,27 +263,13 @@ void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
       }
 
     }
- 
-  
+   
     // 6. update the stopping criterion
     else{ 
       pdel = 0.5 * (logp - logp_old) + 0.5 * pdel;
       logp_old = logp;
     }
     pcum += pdel;
-
-    /*
-    // 6.5 split-merge each cls
-    spmercls = 0;
-    while( spmercls < obj->ngr ) {
-      if( obj->pcl[ spmercls ] > 0 ) {
-        pdel += pdpmlm_splitbest( obj, spmercls );
-        pdel += pdpmlm_mergebest( obj, spmercls );
-      }
-      spmercls++;
-    }
-    pcum += pdel;
-    */
 
     // 7. print summary if requested every 20 iterations
     if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
