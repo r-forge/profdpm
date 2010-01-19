@@ -151,7 +151,7 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // dgesv overwrites the matrix passed in. Hence, we must load s again
   // when the call is finished. If this could be avoided, would save some time
   // obj->fbuf holds some temporary data.
-  // FIXME use dposv or dppsv instead (for sym,pd matrices), may be faster, latter requires changing
+  // FIXME use dposv or dppsv instead (for sym, pd mats), may be faster, latter requires changing
   // all matrices to triangular packed storatge, rather than full storage
   // FIXME do not 'error' here (although I have never observed these errors)
   F77_CALL(dgesv)((int *) &obj->q, &ione, s, (int *) &obj->q,
