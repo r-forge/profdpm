@@ -1,3 +1,5 @@
+- check iter printing in pdpmlm_stoch
+- check alpha > 0
 - add lambda functionality, document
 - add min and max number of clusters option
 - optimize linear equation fortran call, matrix storage
