@@ -51,7 +51,7 @@ double          b0;   // prior b0 parameter
 // y and x are sorted before being passed to the C code such
 // that the values in vgr are in order
 unsigned int  * vgr;  // group vector (array of length p)
-unsigned int  * pgr;  // number in each group (array of length ngr)
+unsigned int  * pgr;  // number of observations in each group (array of length ngr)
 unsigned int    ngr;  // number of groups
 
 // Each of the ngr groups has an entry in vcl indicating
@@ -62,7 +62,8 @@ unsigned int    ngr;  // number of groups
 // and may not be continous. However, there will always 
 // only be ncl distinct values other than BAD_CLS.
 unsigned int  * vcl;  // cluster vector (array of length ngr)
-unsigned int  * pcl;  // number in each cluster (array of length ngr)
+unsigned int  * pcl;  // number of observations in each cluster (array of length ngr)
+unsigned int  * gcl;  // number of groups in each cluster (array of length ngr)
 unsigned int    ncl;  // number of clusters
 
 double        * y;    // y vector (array of length p)
