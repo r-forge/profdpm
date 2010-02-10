@@ -10,8 +10,11 @@
 #include <R_ext/Lapack.h>
 #include "util.h"
 
+// some R specific macros
 #define pdpmlm_printf Rprintf
+#define pdpmlm_runif  runif
 
+#define DEFAULT_GAM    0.000
 #define DEFAULT_ALP    1.000
 #define DEFAULT_A0     0.001
 #define DEFAULT_B0     0.001

@@ -53,15 +53,24 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   //1.3 Check values in param list
   elem       = getListElementByName(param, "gamma");
   if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; }
-  else { obj->gam = REAL(elem)[0]; }
+  else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
+    warning( "list item \"gamma\" must be between zero and one, using default value" );
+    obj->gam = DEFAULT_GAM;
+  } else { obj->gam = REAL(elem)[0]; }
   elem       = getListElementByName(param, "alpha");
   if( elem == R_NilValue ) {
     warning( "list item \"alpha\" missing from param, using default value" );
+    obj->alp = DEFAULT_ALP;
+  } else if( REAL(elem)[0] <= 0 ) {
+    warning( "list item \"alpha\" must be positive, using default value" );
     obj->alp = DEFAULT_ALP;
   } else { obj->alp = REAL(elem)[0]; }
   elem       = getListElementByName(param, "s0");
   if( elem == R_NilValue ) {
     warning( "list item \"s0\" missing from param, using default value" );
+    obj->s0 = DEFAULT_S0;
+  } else if( REAL(elem)[0] <= 0 ) {
+    warning( "list item \"s0\" must be positive, using default value" );
     obj->s0 = DEFAULT_S0;
   } else { obj->s0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "m0");
@@ -78,10 +87,16 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   if( elem == R_NilValue ) { 
     warning( "list item \"a0\" missing, using default value" );
     obj->a0 = DEFAULT_A0;
+  } else if( REAL(elem)[0] <= 0 ) {
+    warning( "list item \"a0\" must be positive, using default value" );
+    obj->a0 = DEFAULT_A0;
   } else { obj->a0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "b0");
   if( elem == R_NilValue ) {
     warning( "list item \"b0\" missing, using default value" );
+    obj->b0 = DEFAULT_B0;
+  } else if( REAL(elem)[0] < 0 ) {
+    warning( "list item \"b0\" must be nonnegative, using default value" );
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = REAL(elem)[0]; }
  
@@ -163,7 +178,9 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
   else if( INTEGER(method)[0] == METHOD_STOCH ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
+    GetRNGstate();
     pdpmlm_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+    PutRNGstate();
   }
   else if( INTEGER(method)[0] == METHOD_AGGLO ) {
     if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } }

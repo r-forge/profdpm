@@ -235,22 +235,21 @@ void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
   vcl_old = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
   grps    = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
-  GetRNGstate();
-  while( maxiter-- != 0 ) {
+  while( iter++ < maxiter ) {
   
     // 1. select the number of groups to shuffle
-    ngrps = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
+    ngrps = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
     ngrps = ngrps == 0 ? 1 : ngrps;
     
     // 2. randomly select ngrps groups to shuffle, save indicators
     for( i = 0; i < ngrps; i++ ) {
-      grps[ i ] = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
+      grps[ i ] = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
       vcl_old[ i ] = obj->vcl[ grps[ i ] ];
     }
   
     // 3. compute old logp, move groups to random cluster
     logp_old = pdpmlm_logp( obj ); 
-    cls = (unsigned int) floor( obj->ngr * runif( 0.0, 1.0 ) );
+    cls = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
     for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
 
     logp = pdpmlm_logp( obj );
@@ -291,7 +290,6 @@ void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
 
   }
   if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }
-  PutRNGstate();
 }
 
 void pdpmlm_merge( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 ) {
@@ -448,4 +446,3 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
     pdpmlm_move( obj, i, vcl_best[ i ] );
   }
 }
-
