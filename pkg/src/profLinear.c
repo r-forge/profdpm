@@ -5,7 +5,7 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP verbose) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP outlier, SEXP maxiter, SEXP crit, SEXP verbose) {
   SEXP retval, elem, names, class, dim;
   pdpmlm_t * obj;
   int i, j, k, cls, onei=1; 
@@ -41,6 +41,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   //1.1 Set flags
   obj->flags   = 0;
   if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
+  if( REAL(outlier)[0] > 1 )   { obj->flags |= FLAG_OUTLIER; obj->out = REAL(outlier)[0]; }
 
   //1.2 Set pointers to data
   obj->y     = REAL(y);

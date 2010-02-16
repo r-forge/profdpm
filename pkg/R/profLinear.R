@@ -1,5 +1,5 @@
 profLinear <- function(y, x, group, clust, param, method="stochastic", 
-                       maxiter=1000, crit=1e-5, verbose=FALSE) {
+                        outlier=FALSE, maxiter=1000, crit=1e-5, verbose=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { 
@@ -54,6 +54,14 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
     warning("method must be a character string, using default")
     method <- "stochastic"
   }
+  if(!is.numeric(outlier) & outlier != FALSE) {
+    warning("outlier must be a numeric value greater than one or FALSE, using default")
+    outlier <- FALSE
+  }
+  if( outlier < 1 ) {
+    warning("outlier must be a numeric value greater than one or FALSE, using default")
+    outlier <- FALSE
+  }
   if(!is.numeric(maxiter) | maxiter < 0) {
     warning("maxiter must be numeric and non-negative, using default")
     maxiter <- 1000
@@ -107,8 +115,8 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
 
   ###################################################
   #call the C function
-  ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method), as.integer(maxiter), 
-               as.numeric(crit), as.logical(verbose), PACKAGE="profdpm")
+  ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method), as.numeric(outlier), 
+                as.integer(maxiter), as.numeric(crit), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering

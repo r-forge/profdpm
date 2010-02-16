@@ -27,7 +27,7 @@
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
 #define FLAG_OPTCRIT  1<<1  // has optimization criterion been met
 #define FLAG_DIRICHL  1<<2  // use cluster Dirichlet prior
-#define FLAG_EMPTY_3  1<<3  // not used
+#define FLAG_OUTLIER  1<<3  // perform outlier detection
 #define FLAG_EMPTY_4  1<<4  // not used
 #define FLAG_EMPTY_5  1<<5  // not used
 #define FLAG_EMPTY_6  1<<6  // not used
@@ -41,6 +41,7 @@ typedef struct {
 
 unsigned char   flags;  // some options
 
+double          out;  // BF in outlier detection
 double          gam;  // prior gamma parameter
 double          alp;  // prior alpha parameter
 double          s0;   // prior s0 parameter
@@ -68,6 +69,7 @@ unsigned int  * vcl;  // cluster vector (array of length ngr)
 unsigned int  * pcl;  // number of observations in each cluster (array of length ngr)
 unsigned int  * gcl;  // number of groups in each cluster (array of length ngr)
 unsigned int    ncl;  // number of clusters
+unsigned int    ocl;  // number of outlier clusters
 
 double        * y;    // y vector (array of length p)
 double        * x;    // x matrix (array of length p*q)
