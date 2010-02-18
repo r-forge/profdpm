@@ -30,11 +30,12 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
    
   if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_add: invalid argument" ); } 
  
-  // 1. set vcl, recompute gcl, pcl, and possibly ncl
+  // 1. set vcl, recompute gcl, pcl, lcl and possibly ncl
   obj->vcl[ grp ] = cls;
   if( obj->gcl[ cls ] == 0 ) { obj->ncl++; }
   obj->pcl[ cls ] += obj->pgr[ grp ];
   obj->gcl[ cls ] += 1;
+  obj->lcl[ cls ] = BAD_LCL;
 
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
@@ -64,11 +65,12 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 
   if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_sub: invalid argument" ); } 
 
-  // 1. set vcl, recompute gcl, and possibly ncl
-  obj->vcl[ grp ] = BAD_CLS;
+  // 1. set vcl, recompute pcl, gcl, lcl and possibly ncl
+  obj->vcl[ grp ] = BAD_VCL;
   obj->pcl[ cls ] -= obj->pgr[ grp ];
   obj->gcl[ cls ] -= 1;
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
+  obj->lcl[ cls ] = BAD_LCL;
 
   // 2. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
   obj->yycl[ cls ] -= obj->yygr[ grp ];
@@ -83,7 +85,7 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int old = obj->vcl[ grp ];
   if( old == cls ) { return; }
-  if( old != BAD_CLS ) {
+  if( old != BAD_VCL ) {
     pdpmlm_sub( obj, grp, old );
   }
   pdpmlm_add( obj, grp, cls );
@@ -118,7 +120,10 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
   logp = obj->ncl * log( obj->alp ) - obj->gam * lfactorial( obj->ncl );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
-    logp += pdpmlm_logpcls( obj, cls );
+    if( obj->lcl[ cls ] == BAD_LCL ) { 
+      obj->lcl[ cls] = pdpmlm_logpcls( obj, cls ); 
+    }
+    logp += obj->lcl[ cls ];
     cls++;
   }
   return logp;
@@ -181,7 +186,7 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 unsigned int pdpmlm_free( pdpmlm_t * obj ) {
   unsigned int cls = 0;
   while( cls < obj->ngr && obj->gcl[ cls ] > 0 ) { cls++; }
-  if( cls == obj->ngr ) { cls = BAD_CLS; }
+  if( cls == obj->ngr ) { cls = BAD_VCL; }
   return cls;
 }
 
@@ -195,7 +200,7 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 
   if( obj->gcl[ best_cls ] > 1 ) {
     test_cls = pdpmlm_free( obj );
-    if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
+    if( test_cls == BAD_VCL ) { error("pdpmlm_best: test_cls should not == BAD_VCL"); }
     test_delp += pdpmlm_movep( obj, grp, test_cls );
     if( test_delp > best_delp ) { 
       best_delp = test_delp;
@@ -349,10 +354,10 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
   double * delp;
   double   delp_temp, delp_best, logp_best = -DBL_MAX;
   unsigned int * vcl_best;
-  unsigned int   delp_ind, i, j, icls, jcls, icls_best = BAD_CLS, jcls_best = BAD_CLS;
-  unsigned int   icls_last = BAD_CLS, jcls_last = BAD_CLS;
-  //int calcs = 0, calcs_cent = obj->ngr * ( obj->ngr - 1 ) + 1;
-  //calcs_cent = calcs_cent > 100 ? calcs_cent / 100 : 1;
+  unsigned int   delp_ind, i, j, icls, jcls, icls_best = BAD_VCL, jcls_best = BAD_VCL;
+  unsigned int   icls_last = BAD_VCL, jcls_last = BAD_VCL;
+  int calcs = 0, calcs_cent = obj->ngr * ( obj->ngr - 1 ) + 1;
+  calcs_cent = calcs_cent > 100 ? calcs_cent / 100 : 1;
 
   //0. allocate some additional memory
   delp = (double *) pdpmlm_alloc( obj, ( obj->ngr * ( obj->ngr - 1 ) / 2 ), sizeof( double ) );
@@ -365,6 +370,11 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
   while( obj->ncl > 1 && maxiter-- != 0 ) {
 
     //2. update and record best delp among all pairs of clusters
+    //testmerge all pairs at first loop (i.e. obj->ncl == obj->ngr)
+    //for subsequent loops, testmerge only the pairs involving jcls_best
+    //other pairs need only be updated with the following:
+    //lfactorial( obj->ncl ) - lfactorial( obj->ncl - 1 ) - log( obj->alp );
+    delp_temp = 2 * lfactorial( obj->ncl ) - lfactorial( obj->ncl + 1 ) - lfactorial( obj->ncl - 1 );
     delp_best = -DBL_MAX;
     icls = 0;
     for( i = 0; i < obj->ncl - 1; i++ ) {
@@ -372,12 +382,14 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
       jcls = icls + 1;
       for( j = 0; j < obj->ncl - i - 1; j++ ) {
         while( obj->gcl[ jcls ] == 0 ) { jcls++; }
-        delp_ind = icls * ( obj->ngr - 1 ) - icls * ( icls - 1 ) / 2 - icls + jcls - 1; 
-        delp[ delp_ind ] = pdpmlm_testmergep( obj, icls, jcls ); 
-        //calcs++;
-        //if( (obj->flags & FLAG_VERBOSE) && (calcs % calcs_cent == 0) ) {
-        //  pdpmlm_printf("\rpercent complete: %d%", calcs / calcs_cent); 
-        //}
+        delp_ind = icls * ( obj->ngr - 1 ) - icls * ( icls - 1 ) / 2 - icls + jcls - 1;
+        if( obj->ncl == obj->ngr || icls == jcls_last || jcls == jcls_last ) { 
+          delp[ delp_ind ] = pdpmlm_testmergep( obj, icls, jcls ); 
+          calcs++;
+          if( (obj->flags & FLAG_VERBOSE) && (calcs % calcs_cent == 0) ) {
+            pdpmlm_printf("\rpercent complete: %d%", calcs / calcs_cent); 
+          }
+        } else { delp[ delp_ind ] += delp_temp; }    
         if( delp[ delp_ind ] > delp_best ) {
           delp_best = delp[ delp_ind ];
           icls_best = icls;
@@ -389,9 +401,10 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
     }
     
     //3. merge the clusters corresponding to the largest delp
-    obj->logp += pdpmlm_merge( obj, icls_best, jcls_best );
+    pdpmlm_merge( obj, icls_best, jcls_best );
     icls_last = icls_best;
     jcls_last = jcls_best;
+    obj->logp += delp_best;
 
     //4. if highest logp (so far) is obtained by merge, save the vcl
     if( obj->logp > logp_best ) {
@@ -400,7 +413,7 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
     }  
   }
 
-  //if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf("\rpercent complete: 100%\n"); }
+  if( obj->flags & FLAG_VERBOSE ) { pdpmlm_printf("\rpercent complete: 100%\n"); }
   //5. cluster the groups according to the highest obtained logp
   obj->logp = logp_best;
   for( i = 0; i < obj->ngr; i++ ) {

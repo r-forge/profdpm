@@ -21,7 +21,8 @@
 #define DEFAULT_M0     0.000
 #define DEFAULT_S0     1.000
 
-#define BAD_CLS INT_MAX
+#define BAD_VCL INT_MAX
+#define BAD_LCL DBL_MAX
 
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose
@@ -68,6 +69,7 @@ unsigned int  * vcl;  // cluster vector (array of length ngr)
 unsigned int  * pcl;  // number of observations in each cluster (array of length ngr)
 unsigned int  * gcl;  // number of groups in each cluster (array of length ngr)
 unsigned int    ncl;  // number of clusters
+double        * lcl;  // contribution of cluster to logp (from pdpmlm_logpcls)
 
 double        * y;    // y vector (array of length p)
 double        * x;    // x matrix (array of length p*q)

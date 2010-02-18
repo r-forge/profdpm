@@ -109,15 +109,17 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
   for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
  
-  //4. Allocate and zero memory vcl, gcl, pcl, ncl
+  //4. Allocate and zero memory vcl, gcl, pcl, lcl, and ncl
   obj->ncl = 0;
   obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
   obj->gcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
   obj->pcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
+  obj->lcl = (double *) pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) { 
-    obj->vcl[ i ] = BAD_CLS;
+    obj->vcl[ i ] = BAD_VCL;
     obj->gcl[ i ] = 0; 
     obj->pcl[ i ] = 0;
+    obj->lcl[ i ] = BAD_LCL;
   }
 
   //5. Allocate and zero memory for xxgr xygr, and yygr
@@ -199,10 +201,10 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   SET_VECTOR_ELT(retval, 9, allocVector(REALSXP, 1)); //logp
   REAL(VECTOR_ELT(retval, 9))[0] = pdpmlm_logp( obj );
 
-  for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_CLS; }
+  for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_VCL; }
   cls = 1;
   for( i = 0; i < obj->p; i++ ) { 
-    if( obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] == BAD_CLS ) { 
+    if( obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] == BAD_VCL ) { 
       obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] = cls++;
     }
     INTEGER(VECTOR_ELT(retval, 4))[i] = obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ];

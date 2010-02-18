@@ -1,8 +1,8 @@
 - check iter printing in pdpmlm_stoch
-- add lambda functionality, document
+- add lambda (gamma) functionality, document
 - add min and max number of clusters option
-- optimize linear equation fortran call, matrix storage
-- get obj->alpha out of most calls
+- optimize linear solution call, matrix storage
+- optimize logp computation
 - add a summary method for profLinear
 - add a plot method for profLinear
 - group need not be ordered on call to profLinear C routine
