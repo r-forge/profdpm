@@ -30,10 +30,9 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
    
   if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_add: invalid argument" ); } 
  
-  // 1. set vcl, recompute gcl, pcl, and possibly ncl and ocl
+  // 1. set vcl, recompute gcl, pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
-  if( obj->gcl[ cls ] == 0 ) { obj->ncl++; obj->ocl++; }
-  if( obj->gcl[ cls ] == 1 ) { obj->ocl--; }
+  if( obj->gcl[ cls ] == 0 ) { obj->ncl++; }
   obj->pcl[ cls ] += obj->pgr[ grp ];
   obj->gcl[ cls ] += 1;
 
@@ -65,12 +64,11 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 
   if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_sub: invalid argument" ); } 
 
-  // 1. set vcl, recompute gcl, and possibly ncl and ocl
+  // 1. set vcl, recompute gcl, and possibly ncl
   obj->vcl[ grp ] = BAD_CLS;
   obj->pcl[ cls ] -= obj->pgr[ grp ];
   obj->gcl[ cls ] -= 1;
-  if( obj->gcl[ cls ] == 0 ) { obj->ncl--; obj->ocl--; }
-  if( obj->gcl[ cls ] == 1 ) { obj->ocl++; }
+  if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
 
   // 2. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
   obj->yycl[ cls ] -= obj->yygr[ grp ];
@@ -117,14 +115,7 @@ double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls = 0, gclmax;
   double logp, logalpo;
-  if( (obj->flags & FLAG_OUTLIER) && (obj->ocl > 0) ) {
-    gclmax = 0;
-    logalpo =  -log(obj->out) + (obj->ncl - obj->ocl) / obj->ocl * lgamma( gclmax + obj->ocl )
-    logp = obj->ncl * log( alpo ) - obj->gam * lfactorial( obj->ncl );
-  }
-  else { 
-    logp = obj->ncl * log( obj->alp ) - obj->gam * lfactorial( obj->ncl );
-  }
+  logp = obj->ncl * log( obj->alp ) - obj->gam * lfactorial( obj->ncl );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
     logp += pdpmlm_logpcls( obj, cls );
