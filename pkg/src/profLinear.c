@@ -52,7 +52,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
 
   //1.3 Check values in param list
   elem       = getListElementByName(param, "gamma");
-  if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; }
+  if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->gam = 0; }
   else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
     warning( "list item \"gamma\" must be between zero and one, using default value" );
     obj->gam = DEFAULT_GAM;
