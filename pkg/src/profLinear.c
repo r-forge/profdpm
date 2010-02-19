@@ -114,12 +114,10 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
   obj->gcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
   obj->pcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-  obj->lcl = (double *) pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) { 
     obj->vcl[ i ] = BAD_VCL;
     obj->gcl[ i ] = 0; 
     obj->pcl[ i ] = 0;
-    obj->lcl[ i ] = BAD_LCL;
   }
 
   //5. Allocate and zero memory for xxgr xygr, and yygr
@@ -199,7 +197,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->ncl)); //m
   SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->ncl)); //s
   SET_VECTOR_ELT(retval, 9, allocVector(REALSXP, 1)); //logp
-  REAL(VECTOR_ELT(retval, 9))[0] = pdpmlm_logp( obj );
+  REAL(VECTOR_ELT(retval, 9))[0] = obj->logp;
 
   for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_VCL; }
   cls = 1;

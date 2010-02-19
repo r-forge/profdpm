@@ -65,7 +65,7 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
   if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_sub: invalid argument" ); } 
 
   // 1. set vcl, recompute gcl, and possibly ncl
-  obj->vcl[ grp ] = BAD_CLS;
+  obj->vcl[ grp ] = BAD_VCL;
   obj->pcl[ cls ] -= obj->pgr[ grp ];
   obj->gcl[ cls ] -= 1;
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
@@ -83,7 +83,7 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
 void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int old = obj->vcl[ grp ];
   if( old == cls ) { return; }
-  if( old != BAD_CLS ) {
+  if( old != BAD_VCL ) {
     pdpmlm_sub( obj, grp, old );
   }
   pdpmlm_add( obj, grp, cls );
@@ -94,7 +94,7 @@ double pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int oldcls = obj->vcl[ grp ];
   unsigned int oldncl = obj->ncl;
   if( oldcls == cls ) { return logp; }
-  if( oldcls != BAD_CLS ) {
+  if( oldcls != BAD_VCL ) {
     logp -= pdpmlm_logpcls( obj, oldcls );
     pdpmlm_sub( obj, grp, oldcls );
     logp += pdpmlm_logpcls( obj, oldcls );
@@ -191,7 +191,7 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 unsigned int pdpmlm_free( pdpmlm_t * obj ) {
   unsigned int cls = 0;
   while( cls < obj->ngr && obj->gcl[ cls ] > 0 ) { cls++; }
-  if( cls == obj->ngr ) { cls = BAD_CLS; }
+  if( cls == obj->ngr ) { cls = BAD_VCL; }
   return cls;
 }
 
@@ -205,7 +205,7 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 
   if( obj->gcl[ best_cls ] > 1 ) {
     test_cls = pdpmlm_free( obj );
-    if( test_cls == BAD_CLS ) { error("pdpmlm_best: test_cls should not == BAD_CLS"); }
+    if( test_cls == BAD_VCL ) { error("pdpmlm_best: test_cls should not == BAD_VCL"); }
     test_delp += pdpmlm_movep( obj, grp, test_cls );
     if( test_delp > best_delp ) { 
       best_delp = test_delp;
@@ -380,8 +380,8 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
   double * delp;
   double   delp_temp, delp_best, logp_best = -DBL_MAX;
   unsigned int * vcl_best;
-  unsigned int   delp_ind, i, j, icls, jcls, icls_best = BAD_CLS, jcls_best = BAD_CLS;
-  unsigned int   icls_last = BAD_CLS, jcls_last = BAD_CLS;
+  unsigned int   delp_ind, i, j, icls, jcls, icls_best = BAD_VCL, jcls_best = BAD_VCL;
+  unsigned int   icls_last = BAD_VCL, jcls_last = BAD_VCL;
   int calcs = 0, calcs_cent = obj->ngr * ( obj->ngr - 1 ) + 1;
   calcs_cent = calcs_cent > 100 ? calcs_cent / 100 : 1;
 
