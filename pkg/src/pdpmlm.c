@@ -26,9 +26,9 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
 }
 
 void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
-  unsigned int i, j;
+  unsigned int i, j, dj;
    
-  if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_add: invalid argument" ); } 
+  if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_add: invalid argument: grp = %u", obj->ngr ); } 
  
   // 1. set vcl, recompute gcl, pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
@@ -38,29 +38,33 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
 
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
-    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q * obj->q, sizeof(double) );
+    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q * ( obj->q + 1 ) / 2, sizeof(double) );
     obj->xycl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
+    dj = 0;
     obj->yycl[ cls ] = 0.0;
     for( i = 0; i < obj->q; i++ ) {
       obj->xycl[ cls ][ i ] = 0.0;
-      for( j = 0; j < obj->q; j++ ) {
-        obj->xxcl[ cls ][ j + i*obj->q ] = 0.0;
+      for( j = i; j < obj->q; j++ ) {
+        obj->xxcl[ cls ][ dj ] = 0.0;
+        dj++;
       }
     }
   }
 
   // 3. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
+  dj = 0;
   obj->yycl[ cls ] += obj->yygr[ grp ];
   for( i = 0; i < obj->q; i++ ) {
     obj->xycl[ cls ][ i ] += obj->xygr[ grp ][ i ];
-    for( j = 0; j < obj->q; j++ ) {
-      obj->xxcl[ cls ][ j + i * obj->q ] += obj->xxgr[ grp ][ j + i * obj->q ];
+    for( j = i; j < obj->q; j++ ) {
+      obj->xxcl[ cls ][ dj ] += obj->xxgr[ grp ][ dj ];
+      dj++;
     }
   }
 }
 
 void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
-  unsigned int i, j;
+  unsigned int i, j, dj;
 
   if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_sub: invalid argument" ); } 
 
@@ -71,11 +75,13 @@ void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
 
   // 2. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
+  dj = 0;
   obj->yycl[ cls ] -= obj->yygr[ grp ];
   for( i = 0; i < obj->q; i++ ) {
     obj->xycl[ cls ][ i ] -= obj->xygr[ grp ][ i ];
-    for( j = 0; j < obj->q; j++ ) {
-      obj->xxcl[ cls ][ j + i * obj->q ] -= obj->xxgr[ grp ][ j + i * obj->q ];
+    for( j = i; j < obj->q; j++ ) {
+      obj->xxcl[ cls ][ dj ] -= obj->xxgr[ grp ][ dj ];
+      dj++;
     }
   }
 }
@@ -136,20 +142,21 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
 
 
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
-  int i, j, d, ione=1, info;
+  int i, j, dj, ione=1, info;
   double done=1.0, dzero=0.0;
 
   if( obj->gcl[ cls ] == 0 ) { return; }
   if( cls >= obj->ngr ) { error( "pdpmlm_parm: invalid argument" ); }
 
   // 1. load s with s0I + x'x, load m with s0m0 + x'y
-  d = 0;
+  dj = 0;
   for( i = 0; i < obj->q; i++ ) {
     m[ i ] = obj->s0 * obj->m0[ i ] + obj->xycl[ cls ][ i ];
-    for( j = 0; j < obj->q; j++ ) {
-      s[ i * obj->q + j ] = obj->xxcl[ cls ][ i * obj->q + j ];
+    for( j = i; j < obj->q; j++ ) {
+      s[ dj ] = obj->xxcl[ cls ][ dj ];
+      if( j == i ) { s[ dj ] += obj->s0; }
+      dj++;
     }
-    s[ i * obj->q + (d++) ] += obj->s0;
   }
      
   // 2. m = (s)^(-1) * m
@@ -159,18 +166,21 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // FIXME use dposv or dppsv instead (for sym, pd mats), may be faster, latter requires changing
   // all matrices to triangular packed storatge, rather than full storage
   // FIXME do not 'error' here (although I have never observed these errors)
-  F77_CALL(dgesv)((int *) &obj->q, &ione, s, (int *) &obj->q,
-                  (int *) obj->fbuf, m, (int *) &obj->q, &info);
-  if( info > 0 ) { error("dgesv: system is singular"); }
-  if( info < 0 ) { error("dgesv: invalid argument"); }
+  //F77_CALL(dppsv)("U", &obj->q, &ione, s, m, &obj->q, &info);
+  F77_CALL(dspsv)("U", &obj->q, &ione, s, (int *) obj->fbuf, m, (int *) &obj->q, &info);
+  //F77_CALL(dgesv)((int *) &obj->q, &ione, s, (int *) &obj->q,
+  //                (int *) obj->fbuf, m, (int *) &obj->q, &info);
+  if( info > 0 ) { error("dppsv: system is singular"); }
+  if( info < 0 ) { error("dppsv: invalid argument"); }
 
   // 3. reload s
-  d = 0;
+  dj = 0;
   for( i = 0; i < obj->q; i++ ) {
-    for( j = 0; j < obj->q; j++ ) {
-      s[ i * obj->q + j ] = obj->xxcl[ cls ][ i * obj->q + j ];
+    for( j = i; j < obj->q; j++ ) {
+      s[ dj ] = obj->xxcl[ cls ][ dj ];
+      if( j == i ) { s[ dj ] += obj->s0; }
+      dj++;
     }
-    s[ i * obj->q + (d++) ] += obj->s0;
   }
 
   // 4. b = b0 + y'y + s0*m0'm0 - m'sm
@@ -179,8 +189,10 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   // b += s0*m0'm0
   *b += obj->s0*F77_CALL(ddot)( (int *) &obj->q, obj->m0, &ione, obj->m0, &ione);
   // obj->fbuf = s*m 
-  F77_CALL(dgemv)( "N", (int *) &obj->q, (int *) &obj->q, &done, s, (int *) &obj->q,
-                    m, &ione, &dzero, obj->fbuf, &ione );
+  //F77_CALL(dgemv)( "N", (int *) &obj->q, (int *) &obj->q, &done, s, (int *) &obj->q,
+  //                  m, &ione, &dzero, obj->fbuf, &ione );
+  F77_CALL(dspmv)("U", (int *) &obj->q, &done, s, m, &ione, &dzero, obj->fbuf, &ione);
+
   // b -= m'obj->fbuf
   *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione );
  

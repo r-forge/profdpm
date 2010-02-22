@@ -47,8 +47,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->x     = REAL(x);
   obj->vgr   = (unsigned int *) INTEGER(group);
   dim        = getAttrib(x, R_DimSymbol); 
-  obj->p     = INTEGER(dim)[ 1 ];
-  obj->q     = INTEGER(dim)[ 0 ];
+  obj->p     = INTEGER(dim)[ 0 ];
+  obj->q     = INTEGER(dim)[ 1 ];
 
   //1.3 Check values in param list
   elem       = getListElementByName(param, "gamma");
@@ -107,8 +107,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->ngr = 0;
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ i ] = 0; }
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
-  for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
- 
+  for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } } 
+
   //4. Allocate and zero memory vcl, gcl, pcl, lcl, and ncl
   obj->ncl = 0;
   obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
@@ -125,26 +125,31 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->xygr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
   obj->yygr = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) {
-    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj, obj->q * obj->q, sizeof(double) );
+    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj, obj->q * ( obj->q + 1 ) / 2, sizeof(double) );
     obj->xygr[ i ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
     obj->yygr[i] = 0.0;
     for( j = 0; j < obj->q; j++ ) {
       obj->xygr[ i ][ j ] = 0.0;
-      for( k = 0; k < obj->q; k++ ) {
-        obj->xxgr[ i ][ k + j*obj->q ] = 0.0;
+      for( k = j; k < obj->q; k++ ) {
+        obj->xxgr[ i ][ UMAT(j, k) ] = 0.0;
       }
     }
   }
   
   //6. Compute xxgr, xygr, yygr
   for( i = 0; i < obj->p; i++ ) {
-       xp = obj->x + i*obj->q;
+       xp = obj->x + i;
        yp = obj->y + i;
-       F77_CALL(dgemm)("N", "T",
-                      (int *) &obj->q, (int *) &obj->q, &onei, &oned,
-                      xp, (int *) &obj->q, xp, (int *) &obj->q,
-                      &oned, obj->xxgr[ obj->vgr[ i ] ], (int *) &obj->q); 
-       F77_CALL(daxpy)((int *) &obj->q, yp, xp, &onei, obj->xygr[ obj->vgr[ i ] ], &onei); 
+      
+       //xxgr += xx'
+       F77_CALL(dspr)("U", (int *) &obj->q, &oned, xp, (int *) &obj->p, obj->xxgr[ obj->vgr[ i ] ] );
+       //F77_CALL(dgemm)("N", "T",
+       //               (int *) &obj->q, (int *) &obj->q, &onei, &oned,
+       //               xp, (int *) &obj->q, xp, (int *) &obj->q,
+       //               &oned, obj->xxgr[ obj->vgr[ i ] ], (int *) &obj->q); 
+
+       //xygr += xy
+       F77_CALL(daxpy)((int *) &obj->q, yp, xp, (int *) &obj->p, obj->xygr[ obj->vgr[ i ] ], &onei); 
        obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
   }
   
@@ -159,7 +164,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
 
   //8. allocate s, m, fbuf, and pbuf
-  obj->s = (double *) pdpmlm_alloc( obj, obj->q * obj->q, sizeof(double) );
+  obj->s = (double *) pdpmlm_alloc( obj, obj->q * ( obj->q + 1 ) / 2, sizeof(double) );
   obj->m = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
   obj->fbuf = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
   obj->pbuf = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
@@ -217,14 +222,20 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
     INTEGER(dim)[1] = obj->q;
     setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1), R_DimSymbol, dim);
 
-    pdpmlm_parm( obj, cls,
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1)),
+    pdpmlm_parm( obj, cls, obj->s,
         REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1)),
         REAL(VECTOR_ELT(retval, 5))+obj->pbuf[ cls ]-1,
         REAL(VECTOR_ELT(retval, 6))+obj->pbuf[ cls ]-1
     );
+    //copy obj->s (packed) to R matrix (full)
+    for( j = 0; j < obj->q; j++ ) {
+      for( k = 0; k < obj->q; k++ ) {
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ FMAT(j, k) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
+      }
+    }
     cls++;
   }
+ 
 
   UNPROTECT(3+obj->ncl);
   return retval;

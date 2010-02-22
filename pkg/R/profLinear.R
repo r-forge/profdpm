@@ -91,9 +91,7 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   if( !is.logical(rc) ) { rc <- as.integer(unclass(rc[ord])-1) }
 
   ###################################################
-  #transpose ordered x to simplify BLAS/LAPACK calls
-  #matrices are double storage by column
-  rx <- t(as.matrix(x[ord,]))
+  rx <- as.matrix(x[ord,])
 
   ###################################################
   #convert method to integer
@@ -113,7 +111,6 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   ###################################################
   #undo ordering
   ret$y[ord] <- ret$y
-  ret$x <- t(ret$x)
   ret$x[ord,] <- ret$x
   ret$group[ord] <- ret$group
   ret$clust[ord] <- ret$clust
