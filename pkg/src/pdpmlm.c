@@ -28,7 +28,9 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
 void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   unsigned int i, j, dj;
    
-  if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_add: invalid argument: grp = %u", obj->ngr ); } 
+  if( grp >= obj->ngr || cls >= obj->ngr ) { 
+    error( "pdpmlm_add: invalid argument: grp = %u cls = %u", grp, cls ); 
+  } 
  
   // 1. set vcl, recompute gcl, pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
@@ -38,7 +40,7 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
 
   // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
   if( obj->xxcl[ cls ] == NULL ) {
-    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q * ( obj->q + 1 ) / 2, sizeof(double) );
+    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
     obj->xycl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
     dj = 0;
     obj->yycl[ cls ] = 0.0;
@@ -66,7 +68,9 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
 void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
   unsigned int i, j, dj;
 
-  if( grp >= obj->ngr || cls >= obj->ngr ) { error( "pdpmlm_sub: invalid argument" ); } 
+  if( grp >= obj->ngr || cls >= obj->ngr ) { 
+    error( "pdpmlm_sub: invalid argument: grp = %u", grp ); 
+  } 
 
   // 1. set vcl, recompute gcl, and possibly ncl
   obj->vcl[ grp ] = BAD_VCL;
@@ -108,10 +112,8 @@ double pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   logp -= pdpmlm_logpcls( obj, cls );
   pdpmlm_add( obj, grp, cls );
   logp += pdpmlm_logpcls( obj, cls );
-  //if( obj->ncl > oldncl ) { logp += log( obj->alp ) - log( obj->ncl ); }
-  //else if( oldncl > obj->ncl ) { logp -= log( obj->alp ) - log( oldncl ); }
-  if( obj->ncl > oldncl ) { logp += log( obj->alp ) - obj->gam * log( obj->ncl ); }
-  else if( oldncl > obj->ncl ) { logp -= log( obj->alp ) - obj->gam * log( oldncl ); }
+  if( obj->ncl > oldncl ) { logp += log( obj->alp ) - obj->lam * log( obj->ncl ); }
+  else if( oldncl > obj->ncl ) { logp -= log( obj->alp ) - obj->lam * log( oldncl ); }
   return logp;
 }
 
@@ -121,7 +123,7 @@ double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
   pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
   logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
-  else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->gam * lgamma( obj->gcl[ cls ] ); }
+  else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->lam * lgamma( obj->gcl[ cls ] ); }
   return logp;
 }
 
@@ -130,8 +132,7 @@ double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
 double pdpmlm_logp( pdpmlm_t * obj ) {
   unsigned int i, cls = 0;
   double logp;
-  logp = obj->ncl * log( obj->alp ) - obj->gam * lgamma( obj->ncl + 1 );
-  //logp = obj->ncl * log( obj->alp ) - lfactorial( obj->ncl );
+  logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
     logp += pdpmlm_logpcls( obj, cls );
@@ -160,17 +161,16 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   }
      
   // 2. m = (s)^(-1) * m
-  // dgesv overwrites the matrix passed in. Hence, we must load s again
+  // d**sv overwrites the matrix passed in. Hence, we must load s again
   // when the call is finished. If this could be avoided, would save some time
   // obj->fbuf holds some temporary data.
-  // FIXME use dposv or dppsv instead (for sym, pd mats), may be faster, latter requires changing
-  // all matrices to triangular packed storatge, rather than full storage
-  // FIXME do not 'error' here (although I have never observed these errors)
+  // I've tried dppsv (positive definite packed), without much success, 
+  // it often returns an error dspsv (symmetric packed) seems to work well.
+  // When matrices were stored in full form rather than packed, I had used
+  // dgesv (general matrices) and it performed well.
   //F77_CALL(dppsv)("U", &obj->q, &ione, s, m, &obj->q, &info);
   F77_CALL(dspsv)("U", &obj->q, &ione, s, (int *) obj->fbuf, m, (int *) &obj->q, &info);
-  //F77_CALL(dgesv)((int *) &obj->q, &ione, s, (int *) &obj->q,
-  //                (int *) obj->fbuf, m, (int *) &obj->q, &info);
-  if( info > 0 ) { error("dppsv: system is singular"); }
+  if( info > 0 ) { warning("dppsv: system is singular"); }
   if( info < 0 ) { error("dppsv: invalid argument"); }
 
   // 3. reload s
@@ -188,13 +188,12 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   *b = obj->b0 + obj->yycl[ cls ];   
   // b += s0*m0'm0
   *b += obj->s0*F77_CALL(ddot)( (int *) &obj->q, obj->m0, &ione, obj->m0, &ione);
-  // obj->fbuf = s*m 
-  //F77_CALL(dgemv)( "N", (int *) &obj->q, (int *) &obj->q, &done, s, (int *) &obj->q,
-  //                  m, &ione, &dzero, obj->fbuf, &ione );
-  F77_CALL(dspmv)("U", (int *) &obj->q, &done, s, m, &ione, &dzero, obj->fbuf, &ione);
-
-  // b -= m'obj->fbuf
-  *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione );
+  // obj->fbuf = s*m
+  if( info == 0 ) { 
+    F77_CALL(dspmv)("U", (int *) &obj->q, &done, s, m, &ione, &dzero, obj->fbuf, &ione);
+    // b -= m'obj->fbuf
+    *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione );
+  }
  
   // 5. a = a0;
   *a = obj->a0 + obj->pcl[ cls ];
@@ -332,7 +331,7 @@ double pdpmlm_mergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 ) {
   //above would be mathematically correct, but not numerically
   //since lfactorial is an approximation 
   //del = lfactorial( obj->ncl ) - lfactorial( obj->ncl - 1 ) - log( obj->alp );
-  del = obj->gam * ( lgamma( obj->ncl + 1 ) - lgamma( obj->ncl ) ) - log( obj->alp );
+  del = obj->lam * ( lgamma( obj->ncl + 1 ) - lgamma( obj->ncl ) ) - log( obj->alp );
  
   //2. merge the cluster
   del -= pdpmlm_logpcls( obj, cls1 );
@@ -360,7 +359,7 @@ double pdpmlm_testmergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 )
   //above would be mathematically correct, but not numerically
   //since lfactorial is an approximation 
   //del = lfactorial( obj->ncl ) - lfactorial( obj->ncl - 1 ) - log( obj->alp );
-  del = obj->gam * ( lgamma( obj->ncl + 1 ) - lgamma( obj->ncl ) ) - log( obj->alp );
+  del = obj->lam * ( lgamma( obj->ncl + 1 ) - lgamma( obj->ncl ) ) - log( obj->alp );
   
   //2. enumerate groups in cls1
   for( testgrp = 0; testgrp < obj->gcl[ cls1 ]; testgrp++ ) {
@@ -412,7 +411,7 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
     //for subsequent loops, testmerge only the pairs involving jcls_best
     //other pairs need only be updated with the following:
     //lfactorial( obj->ncl ) - lfactorial( obj->ncl - 1 ) - log( obj->alp );
-    delp_temp = obj->gam * ( 2 * lgamma( obj->ncl + 1 ) - lgamma( obj->ncl + 2 ) - lgamma( obj->ncl ) );
+    delp_temp = obj->lam * ( 2 * lgamma( obj->ncl + 1 ) - lgamma( obj->ncl + 2 ) - lgamma( obj->ncl ) );
     delp_best = -DBL_MAX;
     icls = 0;
     for( i = 0; i < obj->ncl - 1; i++ ) {

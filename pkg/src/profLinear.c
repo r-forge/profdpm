@@ -51,15 +51,14 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->q     = INTEGER(dim)[ 1 ];
 
   //1.3 Check values in param list
-  elem       = getListElementByName(param, "gamma");
-  if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->gam = 0; }
+  elem       = getListElementByName(param, "lambda");
+  if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->lam = 0; }
   else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
-    warning( "list item \"gamma\" must be between zero and one, using default value" );
-    obj->gam = DEFAULT_GAM;
-  } else { obj->gam = REAL(elem)[0]; }
+    warning( "list item \"lambda\" must be between zero and one, using default value" );
+    obj->lam = DEFAULT_LAM;
+  } else { obj->lam = REAL(elem)[0]; }
   elem       = getListElementByName(param, "alpha");
   if( elem == R_NilValue ) {
-    warning( "list item \"alpha\" missing from param, using default value" );
     obj->alp = DEFAULT_ALP;
   } else if( REAL(elem)[0] <= 0 ) {
     warning( "list item \"alpha\" must be positive, using default value" );
@@ -67,7 +66,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   } else { obj->alp = REAL(elem)[0]; }
   elem       = getListElementByName(param, "s0");
   if( elem == R_NilValue ) {
-    warning( "list item \"s0\" missing from param, using default value" );
     obj->s0 = DEFAULT_S0;
   } else if( REAL(elem)[0] <= 0 ) {
     warning( "list item \"s0\" must be positive, using default value" );
@@ -75,7 +73,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   } else { obj->s0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "m0");
   if( elem == R_NilValue ) {
-    warning( "list item \"m0\" missing from param, using default values" );
     obj->m0 = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) ); 
     for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
   } else if ( LENGTH(elem) < obj->q ) {
@@ -85,7 +82,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   } else { obj->m0 = REAL(elem); }
   elem       = getListElementByName(param, "a0");
   if( elem == R_NilValue ) { 
-    warning( "list item \"a0\" missing, using default value" );
     obj->a0 = DEFAULT_A0;
   } else if( REAL(elem)[0] <= 0 ) {
     warning( "list item \"a0\" must be positive, using default value" );
@@ -93,7 +89,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   } else { obj->a0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "b0");
   if( elem == R_NilValue ) {
-    warning( "list item \"b0\" missing, using default value" );
     obj->b0 = DEFAULT_B0;
   } else if( REAL(elem)[0] < 0 ) {
     warning( "list item \"b0\" must be nonnegative, using default value" );
@@ -107,7 +102,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->ngr = 0;
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ i ] = 0; }
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
-  for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } } 
+  for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
 
   //4. Allocate and zero memory vcl, gcl, pcl, lcl, and ncl
   obj->ncl = 0;
@@ -125,7 +120,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->xygr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
   obj->yygr = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) {
-    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj, obj->q * ( obj->q + 1 ) / 2, sizeof(double) );
+    //xxgr is symmetric packed
+    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
     obj->xygr[ i ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
     obj->yygr[i] = 0.0;
     for( j = 0; j < obj->q; j++ ) {
@@ -138,19 +134,14 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   
   //6. Compute xxgr, xygr, yygr
   for( i = 0; i < obj->p; i++ ) {
-       xp = obj->x + i;
-       yp = obj->y + i;
-      
-       //xxgr += xx'
-       F77_CALL(dspr)("U", (int *) &obj->q, &oned, xp, (int *) &obj->p, obj->xxgr[ obj->vgr[ i ] ] );
-       //F77_CALL(dgemm)("N", "T",
-       //               (int *) &obj->q, (int *) &obj->q, &onei, &oned,
-       //               xp, (int *) &obj->q, xp, (int *) &obj->q,
-       //               &oned, obj->xxgr[ obj->vgr[ i ] ], (int *) &obj->q); 
-
-       //xygr += xy
-       F77_CALL(daxpy)((int *) &obj->q, yp, xp, (int *) &obj->p, obj->xygr[ obj->vgr[ i ] ], &onei); 
-       obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
+    xp = obj->x + i;
+    yp = obj->y + i; 
+    //xxgr += xx' , symmetric packed
+    F77_CALL(dspr)("U", (int *) &obj->q, &oned, xp, (int *) &obj->p, obj->xxgr[ obj->vgr[ i ] ] );
+    //xygr += xy
+    F77_CALL(daxpy)((int *) &obj->q, yp, xp, (int *) &obj->p, obj->xygr[ obj->vgr[ i ] ], &onei); 
+    //yygr += yy
+    obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
   }
   
   //7. allocate and zero xxcl, xycl, yycl
@@ -164,7 +155,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
 
   //8. allocate s, m, fbuf, and pbuf
-  obj->s = (double *) pdpmlm_alloc( obj, obj->q * ( obj->q + 1 ) / 2, sizeof(double) );
+  //s is symmetric packed
+  obj->s = (double *) pdpmlm_alloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
   obj->m = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
   obj->fbuf = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
   obj->pbuf = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );

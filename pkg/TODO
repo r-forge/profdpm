@@ -1,7 +1,6 @@
 - check iter printing in pdpmlm_stoch
-- add lambda (gamma) functionality, document
+- document lambda functionality
 - add min and max number of clusters option
-- optimize linear solution call, matrix storage
 - optimize logp computation
 - add a summary method for profLinear
 - add a plot method for profLinear

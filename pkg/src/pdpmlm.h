@@ -23,7 +23,7 @@
 // a00, a10, a20, ... a01, a11, a21, ...
 #define FMAT(i, j) (i + j * obj->q)
 
-#define DEFAULT_GAM    0.000
+#define DEFAULT_LAM    0.000
 #define DEFAULT_ALP    1.000
 #define DEFAULT_A0     0.001
 #define DEFAULT_B0     0.001
@@ -50,7 +50,7 @@ typedef struct {
 
 unsigned char   flags;  // some options
 
-double          gam;  // prior gamma parameter
+double          lam;  // prior lambda parameter
 double          alp;  // prior alpha parameter
 double          s0;   // prior s0 parameter
 double        * m0;   // prior m0 parameter
