@@ -5,6 +5,15 @@ void * pdpmlm_alloc( pdpmlm_t * obj, unsigned int count, unsigned int size ) {
   return R_alloc( count, size );
 } 
 
+void * pdpmlm_zalloc( pdpmlm_t * obj, unsigned int count, unsigned int size ) {
+  void * data = R_alloc( count, size );
+  char * start = (char *) data;
+  char * end = start + count * size;
+  do { *(start++) = 0; } while( start < end );
+  obj->mem += count * size;
+  return data;
+} 
+
 void pdpmlm_divy( pdpmlm_t * obj ) {
   unsigned int i, grp = 0, cls = 0, set = 0;
   double a, b;
@@ -20,8 +29,9 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
     }
     if( set == 0 ) { pdpmlm_add( obj, grp, ++cls ); } 
   }
+  obj->logp = pdpmlm_logp( obj );
   if( obj->flags & FLAG_VERBOSE ) {
-    pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, pdpmlm_logp( obj ) );
+    pdpmlm_printf("iter: 0, ncl: %u, logp: %f\n", obj->ncl, obj->logp );
   } 
 }
 
@@ -38,19 +48,11 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   obj->pcl[ cls ] += obj->pgr[ grp ];
   obj->gcl[ cls ] += 1;
 
-  // 2. allocate memory for xxcl and xycl if necessary, zero xxcl, xycl
+  // 2. allocate and zero memory for xxcl and xycl if necessary
   if( obj->xxcl[ cls ] == NULL ) {
-    obj->xxcl[ cls ] = (double *) pdpmlm_alloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
-    obj->xycl[ cls ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
-    dj = 0;
+    obj->xxcl[ cls ] = (double *) pdpmlm_zalloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
+    obj->xycl[ cls ] = (double *) pdpmlm_zalloc( obj, obj->q, sizeof(double) );
     obj->yycl[ cls ] = 0.0;
-    for( i = 0; i < obj->q; i++ ) {
-      obj->xycl[ cls ][ i ] = 0.0;
-      for( j = i; j < obj->q; j++ ) {
-        obj->xxcl[ cls ][ dj ] = 0.0;
-        dj++;
-      }
-    }
   }
 
   // 3. recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
@@ -240,11 +242,14 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 
 void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls;
-  double logp_old, logp, pdel = 1, pcum = 0;
+  double logp_old, pdel = 1, pcum = 0;
 
   // 0. allocate memory for vcl_old, grps
   vcl_old = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
   grps    = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
+
+  // 0.5 compute initial logp
+  obj->logp = pdpmlm_logp( obj );
 
   while( iter++ < maxiter ) {
   
@@ -258,30 +263,31 @@ void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
       vcl_old[ i ] = obj->vcl[ grps[ i ] ];
     }
   
-    // 3. compute old logp, move groups to random cluster
-    logp_old = pdpmlm_logp( obj ); 
+    // 3. compute old logp, move groups to random cluster 
+    logp_old = obj->logp;
     cls = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
     for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
 
-    logp = pdpmlm_logp( obj );
-    if( logp <= logp_old ) {  
+    obj->logp = pdpmlm_logp( obj );
+    if( obj->logp <= logp_old ) {  
 
       // 4. move each group to best cluster
       for( i = 0; i < ngrps; i++ ) { pdpmlm_best( obj, grps[ i ] ); }
 
       // 5. compute logp, keep new clustering if better, else revert to old
-      logp = pdpmlm_logp( obj );
-      if( logp <= logp_old ) {    
+      obj->logp = pdpmlm_logp( obj );
+      if( obj->logp <= logp_old ) {    
         for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
         pdel *= 0.9;
+        obj->logp = logp_old;
       }
 
     }
    
     // 6. update the stopping criterion
     else{ 
-      pdel = 0.5 * (logp - logp_old) + 0.5 * pdel;
-      logp_old = logp;
+      pdel = 0.5 * (obj->logp - logp_old) + 0.5 * pdel;
+      logp_old = obj->logp;
     }
     pcum += pdel;
 

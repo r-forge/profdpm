@@ -107,6 +107,9 @@ unsigned int    mem;    // memory usage counter (using sizeof)
 // Allocate memory and count usage in obj->mem
 void *       pdpmlm_alloc( pdpmlm_t * obj, unsigned int count, unsigned int size );
 
+// Allocate and zero memory and count usage in obj->mem
+void *       pdpmlm_zalloc( pdpmlm_t * obj, unsigned int count, unsigned int size );
+
 // Assign the observations/groups according to a simple algorithm
 void         pdpmlm_divy( pdpmlm_t * obj );
 

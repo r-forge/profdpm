@@ -96,24 +96,19 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   } else { obj->b0 = REAL(elem)[0]; }
  
   //2. Allocate memory for pgr
-  obj->pgr = (unsigned int *) pdpmlm_alloc( obj, obj->p, sizeof(unsigned int) );
+  obj->pgr = (unsigned int *) pdpmlm_zalloc( obj, obj->p, sizeof(unsigned int) );
 
   //3. Compute pgr, ngr
   obj->ngr = 0;
-  for( i = 0; i < obj->p; i++ ) { obj->pgr[ i ] = 0; }
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
   for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
 
   //4. Allocate and zero memory vcl, gcl, pcl, lcl, and ncl
   obj->ncl = 0;
   obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-  obj->gcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-  obj->pcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-  for( i = 0; i < obj->ngr; i++ ) { 
-    obj->vcl[ i ] = BAD_VCL;
-    obj->gcl[ i ] = 0; 
-    obj->pcl[ i ] = 0;
-  }
+  obj->gcl = (unsigned int *) pdpmlm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
+  obj->pcl = (unsigned int *) pdpmlm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
+  for( i = 0; i < obj->ngr; i++ ) { obj->vcl[ i ] = BAD_VCL; }
 
   //5. Allocate and zero memory for xxgr xygr, and yygr
   obj->xxgr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
@@ -121,15 +116,9 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   obj->yygr = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) {
     //xxgr is symmetric packed
-    obj->xxgr[ i ] = (double *) pdpmlm_alloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
-    obj->xygr[ i ] = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
+    obj->xxgr[ i ] = (double *) pdpmlm_zalloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
+    obj->xygr[ i ] = (double *) pdpmlm_zalloc( obj, obj->q, sizeof(double) );
     obj->yygr[i] = 0.0;
-    for( j = 0; j < obj->q; j++ ) {
-      obj->xygr[ i ][ j ] = 0.0;
-      for( k = j; k < obj->q; k++ ) {
-        obj->xxgr[ i ][ UMAT(j, k) ] = 0.0;
-      }
-    }
   }
   
   //6. Compute xxgr, xygr, yygr
@@ -145,14 +134,9 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   }
   
   //7. allocate and zero xxcl, xycl, yycl
-  obj->xxcl = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
-  obj->xycl = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
-  obj->yycl = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
-  for( i = 0; i < obj->ngr; i++ ) {
-    obj->xxcl[ i ] = NULL;
-    obj->xycl[ i ] = NULL;
-    obj->yycl[ i ] = 0.0;
-  }
+  obj->xxcl = (double **) pdpmlm_zalloc( obj, obj->ngr, sizeof(double *) );
+  obj->xycl = (double **) pdpmlm_zalloc( obj, obj->ngr, sizeof(double *) );
+  obj->yycl = (double *)  pdpmlm_zalloc( obj, obj->ngr, sizeof(double) );
 
   //8. allocate s, m, fbuf, and pbuf
   //s is symmetric packed
@@ -172,6 +156,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
 
   if( INTEGER(method)[0] == METHOD_NONE ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
+    obj->logp = pdpmlm_logp( obj );
   }
   else if( INTEGER(method)[0] == METHOD_STOCH ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
