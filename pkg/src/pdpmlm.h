@@ -30,7 +30,7 @@
 #define DEFAULT_M0     0.000
 #define DEFAULT_S0     1.000
 
-#define BAD_VCL INT_MAX
+#define BAD_VCL UINT_MAX
 
 // bit masks for flags
 #define FLAG_VERBOSE  1<<0  // should routine be verbose

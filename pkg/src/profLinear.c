@@ -95,7 +95,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = REAL(elem)[0]; }
  
-  //2. Allocate memory for pgr
+  //2. Allocate memory for pgr, normalize vgr
   obj->pgr = (unsigned int *) pdpmlm_zalloc( obj, obj->p, sizeof(unsigned int) );
 
   //3. Compute pgr, ngr

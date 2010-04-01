@@ -9,6 +9,6 @@ profRand <- function( p1, p2 ) {
 
   u1 <- unique( cbind( p1$group, p1$clust ) )[,2]
   u2 <- unique( cbind( p2$group, p2$clust ) )[,2]
-  ret <- .Call("Rand", as.integer(u1), as.integer(u2), PACKAGE="profdpm")
+  ret <- .Call("Rand", as.factor(u1), as.factor(u2), PACKAGE="profdpm")
   return( ret )
 }

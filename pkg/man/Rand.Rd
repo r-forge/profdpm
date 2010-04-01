@@ -3,7 +3,7 @@
 \title{The Rand Statistic}
 
 \description{
-  This function computes the Rand statistic (1971), a metric that quantifies the similarity between two vectors that may be coerced into factors.
+  This function computes the Rand statistic (1971), a metric that quantifies the similarity between two factors.
 }
 
 \usage{
@@ -11,8 +11,8 @@
 }
 
 \arguments{
-  \item{x1}{a vector}
-  \item{x2}{a vector}
+  \item{x1}{a factor}
+  \item{x2}{a factor}
 }
 
 \value{
@@ -20,7 +20,7 @@
 }
 
 \details{
-  This function computes the similarity between two vectors representing the cluster partition of \eqn{ n }{ n } items. The two vectors should be of the same length. If observation \eqn{ k }{ k } is clustered together with observation \eqn{ j }{ j } in both \sQuote{x1} and \sQuote{x2}, then this constitutes an equivalent clustering. Hence, there are \eqn{ n(n-1)/2 }{ n(n-1)/2 } possible equivalent clusterings, where \eqn{ n }{ n } is the length of \sQuote{x1} and \sQuote{x2}. The metric is computed as the number of equivalent clusterings divided by the number possible equivalent clusterings. See Rand (1971) for additional details.
+  This function computes the similarity between two factors representing the cluster partition of \eqn{ n }{ n } items. The two vectors should be of the same length. If observation \eqn{ k }{ k } is clustered together with observation \eqn{ j }{ j } in both \sQuote{x1} and \sQuote{x2}, then this constitutes an equivalent clustering. Hence, there are \eqn{ n(n-1)/2 }{ n(n-1)/2 } possible equivalent clusterings, where \eqn{ n }{ n } is the length of \sQuote{x1} and \sQuote{x2}. The metric is computed as the number of equivalent clusterings divided by the number of possible equivalent clusterings. See Rand (1971) for additional details.
 }
 
 \references{
