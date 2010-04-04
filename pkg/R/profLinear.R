@@ -63,7 +63,7 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
     crit <- 1e-5
   }
   if(!is.logical(verbose)) {
-    warning("verbose must be a character string, using default")
+    warning("verbose must be a logical, using default")
     verbose <- FALSE
   }
 
@@ -76,7 +76,8 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   if( is.logical(clust) ) { rc <- FALSE }
   else{ rc <- clust[!miss] }
   if( any( miss ) ) {
-    warning( "removed observations with missing values: ", paste(" ", (1:length(y))[miss], sep="") )
+    warning( "removed observations with missing values: ", 
+      paste(" ", (1:length(y))[miss], sep="") )
   }
 
   ###################################################

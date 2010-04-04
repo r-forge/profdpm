@@ -5,7 +5,8 @@
 #include "pdpmlm.h"
 
 
-SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP verbose) {
+SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
+  SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP verbose) {
   SEXP retval, elem, names, class, dim;
   pdpmlm_t * obj;
   int i, j, k, cls, onei=1; 
@@ -95,7 +96,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = REAL(elem)[0]; }
  
-  //2. Allocate memory for pgr, normalize vgr
+  //2. Allocate memory for pgr
   obj->pgr = (unsigned int *) pdpmlm_zalloc( obj, obj->p, sizeof(unsigned int) );
 
   //3. Compute pgr, ngr
@@ -103,7 +104,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
   for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
 
-  //4. Allocate and zero memory vcl, gcl, pcl, lcl, and ncl
+  //4. Allocate and zero memory vcl, gcl, pcl, and ncl
   obj->ncl = 0;
   obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
   obj->gcl = (unsigned int *) pdpmlm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
@@ -153,7 +154,8 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
       i += obj->pgr[ j ];
     }
   } 
-
+  
+  //***********************************************************
   if( INTEGER(method)[0] == METHOD_NONE ) {
     if( isLogical(clust) ) { pdpmlm_divy( obj ); }
     obj->logp = pdpmlm_logp( obj );
@@ -172,6 +174,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
   }
+  //***********************************************************
 
   //10. complete the return value
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a
@@ -207,7 +210,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust, SEXP param, SEXP method,
     //copy obj->s (packed) to R matrix (full)
     for( j = 0; j < obj->q; j++ ) {
       for( k = 0; k < obj->q; k++ ) {
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ FMAT(j, k) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ (i + j * obj->q) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
       }
     }
     cls++;

@@ -19,10 +19,6 @@
 // i <= j
 #define UMAT(i, j) (i + j * ( j + 1 ) / 2)
 
-// address full storage mat (by column)
-// a00, a10, a20, ... a01, a11, a21, ...
-#define FMAT(i, j) (i + j * obj->q)
-
 #define DEFAULT_LAM    0.000
 #define DEFAULT_ALP    1.000
 #define DEFAULT_A0     0.001
@@ -42,6 +38,7 @@
 #define FLAG_EMPTY_6  1<<6  // not used
 #define FLAG_EMPTY_7  1<<7  // not used
 
+// optimization methods
 #define METHOD_NONE   0
 #define METHOD_STOCH  1
 #define METHOD_AGGLO  2
@@ -57,41 +54,73 @@ double        * m0;   // prior m0 parameter
 double          a0;   // prior a0 parameter
 double          b0;   // prior b0 parameter
 
-// Each of the p entries in y has a corresponding entry in vgr
+// ngr - number of groups
+// ngr is the number of distinct group values
+unsigned int    ngr;  // number of groups
+
+// vgr - group membership vector
+// Each of the p entries in y has a corresponding integer in vgr
 // that indicates group membership. The values in vgr begin
 // at zero and are increasing. The largest value is ngr-1.
 // y and x are sorted before being passed to the C code such
-// that the values in vgr are in order
-unsigned int  * vgr;  // group vector (array of length p)
-unsigned int  * pgr;  // number of observations in each group (array of length ngr)
-unsigned int    ngr;  // number of groups
+// that the values in vgr are in order. (length p)
+unsigned int  * vgr;
 
+// pgr - number of observations in each group
+// The number of observations assigned to each group is stored 
+// in pgr. pgr is a vector of length ngr and contains values between 1 and p.
+// The group indicator us used to index pgr. Hence, 'pgr[ 0 ]' would give 
+// number of observations in group 0. (length ngr)
+unsigned int  * pgr;
+
+// ncl - number of clusters. 
+// Each group is assigned to exactly one cluster. Each 
+// cluster is made up of one or more groups. ncl is the current 
+// number of clusters. ncl must be less than or equal to ngr.
+unsigned int    ncl;
+
+// vcl - cluster membership vector
 // Each of the ngr groups has an entry in vcl indicating
 // group membership. The group indicator is used to index
 // the values in vcl. Hence, 'vcl[ 0 ]' would yield the 
 // cluster indicator for group 0. The values in vcl may 
-// range from 0 to ngr-1. These values are not ordered,
-// and may not be continous. However, there will always 
-// only be ncl distinct values other than BAD_CLS.
-unsigned int  * vcl;  // cluster vector (array of length ngr)
-unsigned int  * pcl;  // number of observations in each cluster (array of length ngr)
-unsigned int  * gcl;  // number of groups in each cluster (array of length ngr)
-unsigned int    ncl;  // number of clusters
+// range from 0 to ngr-1. These values are not ordered.
+// However, there will always be ncl distinct values 
+// other than BAD_CLS. (length ngr)
+unsigned int  * vcl;
+
+// pcl - number of observations in each cluster
+// pcl is similar to pgr, but for clusters rather than
+// groups. (length ngr)
+unsigned int  * pcl;
+
+// gcl - number of groups in each cluster
+// (length ngr)
+unsigned int  * gcl;  
 
 double        * y;    // y vector (array of length p)
 double        * x;    // x matrix (array of length p*q)
 unsigned int    p;    // nrow(x)
 unsigned int    q;    // ncol(x)
 
-double       ** xxgr;   // x'x matrix (array of ngr arrays of length q*q)
+// xxgr, xygr, and yygr store, for each group the matrix
+// x'x, vector x'y, and scalar y'y, where x is the matrix of 
+// covariates of a particular group and y are the dependent 
+// observations of the same group. The matrices pointed to by
+// xxgr are upper triangular packed storage
+double       ** xxgr;   // x'x matrix (array of ngr arrays of length q*(q+1)/2)
 double       ** xygr;   // x'y vector (array of ngr arrays of length q)
 double        * yygr;   // y'y scalar (array of length ngr)
 
-double       ** xxcl;   // x'x matrix (array of at least ncl arrays of length q*q)
+// xxcl, xycl, and yycl are similar to the variables above,
+// but for each cluster rather than each group.
+double       ** xxcl;   // x'x matrix (array of at least ncl arrays of length (q*(q+1))/2)
 double       ** xycl;   // x'y matrix (array of at least ncl arrays of length q)
 double        * yycl;   // y'y scalar (array of at least length ncl)
 
-double        * s;      // storage for an s matrix (array of length q*q)
+// s, m, a, and b are temporary storage variables used to hold
+// posterior quantities
+double        * s;      // storage for an s matrix (array of length q*(q+1)/2)
 double        * m;      // storage for an m vector (array of length q)
 double          a;      // storage for an a scalar
 double          b;      // storage for an b scalar
