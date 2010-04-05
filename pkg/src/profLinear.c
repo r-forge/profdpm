@@ -210,7 +210,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     //copy obj->s (packed) to R matrix (full)
     for( j = 0; j < obj->q; j++ ) {
       for( k = 0; k < obj->q; k++ ) {
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ (i + j * obj->q) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ (j + k * obj->q) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
       }
     }
     cls++;
