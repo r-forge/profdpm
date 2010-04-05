@@ -42,6 +42,7 @@
 #define METHOD_NONE   0
 #define METHOD_STOCH  1
 #define METHOD_AGGLO  2
+#define METHOD_GIBBS  3
 
 typedef struct {
 
@@ -177,6 +178,9 @@ double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );
 
 // Compute the log posterior value for the model 
 double       pdpmlm_logp( pdpmlm_t * obj );
+
+// Perform Gibbs sampler optimization
+void         pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit );
 
 // Perform stochastic optimization
 void         pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit );

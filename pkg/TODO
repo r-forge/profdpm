@@ -1,3 +1,4 @@
+- add formula method to profLinear
 - check iter printing in pdpmlm_stoch
 - document lambda functionality
 - add min and max number of clusters option

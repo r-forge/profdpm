@@ -166,15 +166,21 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     pdpmlm_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
     PutRNGstate();
   }
+  else if( INTEGER(method)[0] == METHOD_GIBBS ) {
+    if( isLogical(clust) ) { pdpmlm_divy( obj ); }
+    GetRNGstate();
+    pdpmlm_gibbs( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+    PutRNGstate();
+  }
   else if( INTEGER(method)[0] == METHOD_AGGLO ) {
     if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } }
     pdpmlm_agglo( obj, INTEGER(maxiter)[0] );
   }
+  //***********************************************************
 
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
   }
-  //***********************************************************
 
   //10. complete the return value
   SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, obj->ncl)); //a

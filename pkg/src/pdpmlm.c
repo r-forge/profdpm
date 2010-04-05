@@ -19,15 +19,17 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
   double a, b;
   pdpmlm_add( obj, grp, cls );
   for( grp = 1; grp < obj->ngr; grp++ ) {
-    set = 0;
-    for( i = 0; i < cls; i++ ) {
+    for( cls = 0; cls < obj->ncl; cls++ ) {
       pdpmlm_parm( obj, cls, obj->s, obj->m, &a, &b );
       pdpmlm_add( obj, grp, cls );
       pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-      if( ( (obj->a / obj->b) / (a / b) ) < 1.10 ) { set = 1; break; }
+      // Generally precision (a/b) is decreased with addition 
+      // of a group to a cluster. We accept the addition when
+      // the the precision changes by more than 0.95 fold
+      if( ( (obj->a / obj->b) / (a / b) ) > 0.95 ) { break; }
       else { pdpmlm_sub( obj, grp, cls ); }
     }
-    if( set == 0 ) { pdpmlm_add( obj, grp, ++cls ); } 
+    if( cls == obj->ncl ) { pdpmlm_add( obj, grp, cls ); } 
   }
   obj->logp = pdpmlm_logp( obj );
   if( obj->flags & FLAG_VERBOSE ) {
@@ -239,6 +241,92 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
 
   if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
 }
+
+static unsigned  int rmulti( double * logp, unsigned int n ) {
+  unsigned int i, j, ret = 0;
+  double pl, ph, u;
+  u = pdpmlm_runif(0.0, 0.1);
+  pl = 0; 
+  for( i = 0; i < n; i++ ) {
+    ph = 0;
+    for( j = 0; j < n; j++ ) {
+      ph += exp( logp[ j ] - logp[ i ] );
+    }
+    ph = pl + 1/ph;
+    if( u > pl && u < ph ) { ret = i; }
+    pl = ph;
+  }
+  return ret;
+}
+
+void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
+  unsigned int i, *vcl_best, cls, grp, iter = 0;
+  unsigned int cls_old, cls_new, *proposal_cls, proposal_ncl;
+  double u, p, pcum, logp_best, *proposal_logp;
+
+  // 0. compute initial logp, save initial partition
+  obj->logp = pdpmlm_logp( obj );
+  logp_best = obj->logp;
+  vcl_best = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
+  for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
+
+  proposal_logp = (double*) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
+  proposal_cls  = (unsigned int*) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
+
+  while( iter++ < maxiter ) {
+  
+    for( grp = 0; grp < obj->ngr; grp++ ) {
+
+      // 1. save old cluster
+      cls_old = obj->vcl[ grp ];
+
+      // 2. compute change in logp for possible moves
+      cls = 0;
+      proposal_ncl = 0;
+      for( i = 0; i < obj->ncl; i++ ) {
+        while( obj->gcl[ cls ] == 0 ) { cls++; }
+        proposal_logp[ i ] = pdpmlm_movep( obj, grp, cls );
+        proposal_cls[ i ] = cls;
+        proposal_ncl++;
+        pdpmlm_move( obj, grp, cls_old );
+        cls++;
+      }
+
+      if( obj->gcl[ obj->vcl[ grp ] ] > 1 ) { 
+        proposal_cls[ obj->ncl ] = pdpmlm_free( obj );
+        proposal_logp[ obj->ncl ] = pdpmlm_movep( obj, grp, proposal_cls[ obj->ncl ] );
+        proposal_ncl++;
+        pdpmlm_move( obj, grp, cls_old );
+      }
+
+      // 3. draw from the conditional
+      cls_new = proposal_cls[ rmulti( proposal_logp, proposal_ncl ) ];
+      obj->logp += pdpmlm_movep( obj, grp, cls_new );
+
+    }
+   
+    // 4. save best partition so far
+    if( obj->logp > logp_best ) {
+      logp_best = obj->logp;
+      for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
+    }
+     
+    // 5. print summary if requested every 20 iterations
+    if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
+      pdpmlm_printf("iter: %u, ncl: %u, logp: %f\n", iter, obj->ncl, obj->logp );
+    }
+    
+  }
+   
+  // 6. restore the best partition
+  for( grp = 0; grp < obj->ngr; grp++ ) { 
+    pdpmlm_move( obj, grp, vcl_best[ grp ] );  
+    obj->logp = pdpmlm_logp( obj );
+  }
+
+  if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }
+}
+
 
 void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
   unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls;
