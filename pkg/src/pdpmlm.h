@@ -125,6 +125,7 @@ double        * s;      // storage for an s matrix (array of length q*(q+1)/2)
 double        * m;      // storage for an m vector (array of length q)
 double          a;      // storage for an a scalar
 double          b;      // storage for an b scalar
+double          d;      // storage for an d scalar
 
 double          logp;   // log posterior value
 
@@ -171,7 +172,7 @@ void         pdpmlm_merge( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 
 void         pdpmlm_best( pdpmlm_t * obj, unsigned int grp );
 
 // Compute the posterior parameters s, m, a, and b for a given cluster
-void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b );
+void         pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b, double * d );
 
 // Compute part of the log posterior value for a particular cluster
 double       pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls );

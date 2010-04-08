@@ -208,10 +208,11 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     INTEGER(dim)[1] = obj->q;
     setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1), R_DimSymbol, dim);
 
-    pdpmlm_parm( obj, cls, obj->s,
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1)),
-        REAL(VECTOR_ELT(retval, 5))+obj->pbuf[ cls ]-1,
-        REAL(VECTOR_ELT(retval, 6))+obj->pbuf[ cls ]-1
+    pdpmlm_parm( obj, cls, obj->s,\
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1)),\
+        REAL(VECTOR_ELT(retval, 5))+obj->pbuf[ cls ]-1,\
+        REAL(VECTOR_ELT(retval, 6))+obj->pbuf[ cls ]-1,\
+        &obj->d\
     );
     //copy obj->s (packed) to R matrix (full)
     for( j = 0; j < obj->q; j++ ) {

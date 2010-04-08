@@ -20,9 +20,9 @@ void pdpmlm_divy( pdpmlm_t * obj ) {
   pdpmlm_add( obj, grp, cls );
   for( grp = 1; grp < obj->ngr; grp++ ) {
     for( cls = 0; cls < obj->ncl; cls++ ) {
-      pdpmlm_parm( obj, cls, obj->s, obj->m, &a, &b );
+      pdpmlm_parm( obj, cls, obj->s, obj->m, &a, &b, &obj->d );
       pdpmlm_add( obj, grp, cls );
-      pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
+      pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b, &obj->d );
       // Generally precision (a/b) is decreased with addition 
       // of a group to a cluster. We accept the addition when
       // the the precision changes by more than 0.95 fold
@@ -124,8 +124,8 @@ double pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
 double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
   double logp;
   if( obj->gcl[ cls ] == 0 ) { return 0.0; }
-  pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b );
-  logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 );
+  pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b, &obj->d );
+  logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 ) - obj->d;
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
   else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->lam * lgamma( obj->gcl[ cls ] ); }
   return logp;
@@ -146,7 +146,7 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
 }
 
 
-void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b ) {
+void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b, double * d ) {
   int i, j, dj, ione=1, info;
   double done=1.0, dzero=0.0;
 
@@ -176,6 +176,18 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   F77_CALL(dspsv)("U", &obj->q, &ione, s, (int *) obj->fbuf, m, (int *) &obj->q, &info);
   if( info > 0 ) { warning("dppsv: system is singular"); }
   if( info < 0 ) { error("dppsv: invalid argument"); }
+
+  // 2.5 d = 0.5*log|det(s)| (see dspsv/dsptrf documentation)
+  *d = 0.0;
+  for( i = 0; i < obj->q; i++ ) {
+    *d += log( abs( s[ UMAT(i, i) ] ) );
+     if( i > 0 &&\
+         obj->fbuf[ i ] < 0 &&\
+         obj->fbuf[ i-1 ] == obj->fbuf[ i ] ) {
+       *d -= 2*log( abs( s[ UMAT(i-1,i) ] ) );
+     }
+   }
+   *d *= 0.5;
 
   // 3. reload s
   dj = 0;
