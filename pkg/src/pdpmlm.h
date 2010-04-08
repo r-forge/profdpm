@@ -19,6 +19,9 @@
 // i <= j
 #define UMAT(i, j) (i + j * ( j + 1 ) / 2)
 
+// absolute value
+#define ABS(x) (x < 0 ? -x : x)
+
 #define DEFAULT_LAM    0.000
 #define DEFAULT_ALP    1.000
 #define DEFAULT_A0     0.001

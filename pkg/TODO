@@ -1,3 +1,4 @@
+- agglo method goes past 100% done when logp returns -Inf or Inf
 - add formula method to profLinear
 - check iter printing in pdpmlm_stoch
 - document lambda functionality

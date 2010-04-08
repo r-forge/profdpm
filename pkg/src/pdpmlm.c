@@ -128,6 +128,7 @@ double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
   logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 ) - obj->d;
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
   else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->lam * lgamma( obj->gcl[ cls ] ); }
+  pdpmlm_printf("cls: %u, d: %f, logp: %f\n", cls, obj->d, logp);
   return logp;
 }
 
@@ -147,7 +148,7 @@ double pdpmlm_logp( pdpmlm_t * obj ) {
 
 
 void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b, double * d ) {
-  int i, j, dj, ione=1, info;
+  int i, j, dj, ione=1, info, *ipiv;
   double done=1.0, dzero=0.0;
 
   if( obj->gcl[ cls ] == 0 ) { return; }
@@ -165,29 +166,26 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   }
      
   // 2. m = (s)^(-1) * m
-  // d**sv overwrites the matrix passed in. Hence, we must load s again
-  // when the call is finished. If this could be avoided, would save some time
-  // obj->fbuf holds some temporary data.
-  // I've tried dppsv (positive definite packed), without much success, 
-  // it often returns an error dspsv (symmetric packed) seems to work well.
-  // When matrices were stored in full form rather than packed, I had used
-  // dgesv (general matrices) and it performed well.
-  //F77_CALL(dppsv)("U", &obj->q, &ione, s, m, &obj->q, &info);
-  F77_CALL(dspsv)("U", &obj->q, &ione, s, (int *) obj->fbuf, m, (int *) &obj->q, &info);
+  // dspsv overwrites s, must reload s aftward.
+  ipiv = (int *) obj->fbuf;
+  F77_CALL(dspsv)("U", (int *) &obj->q, &ione, s, ipiv, m, (int *) &obj->q, &info);
   if( info > 0 ) { warning("dppsv: system is singular"); }
   if( info < 0 ) { error("dppsv: invalid argument"); }
 
   // 2.5 d = 0.5*log|det(s)| (see dspsv/dsptrf documentation)
   *d = 0.0;
   for( i = 0; i < obj->q; i++ ) {
-    *d += log( abs( s[ UMAT(i, i) ] ) );
-     if( i > 0 &&\
-         obj->fbuf[ i ] < 0 &&\
-         obj->fbuf[ i-1 ] == obj->fbuf[ i ] ) {
-       *d -= 2*log( abs( s[ UMAT(i-1,i) ] ) );
-     }
-   }
-   *d *= 0.5;
+    if( ipiv[ i ] > 0 ) {
+      *d += log( ABS( s[ UMAT(i, i) ] ) );
+    } else if( i > 0 && ipiv[ i ] < 0 && ipiv[ i-1 ] == ipiv[ i ] ) {
+      *d += log( ABS(
+        s[ UMAT(i-1,i-1) ] * s[ UMAT(i,i) ] -\
+        s[ UMAT(i-1,i) ] * s[ UMAT(i-1,i) ] )\
+      );
+    }
+  }
+  *d *= 0.5;
+  pdpmlm_printf("det: %f\n", *d);
 
   // 3. reload s
   dj = 0;
@@ -305,8 +303,8 @@ void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
       }
 
       if( obj->gcl[ obj->vcl[ grp ] ] > 1 ) { 
-        proposal_cls[ obj->ncl ] = pdpmlm_free( obj );
-        proposal_logp[ obj->ncl ] = pdpmlm_movep( obj, grp, proposal_cls[ obj->ncl ] );
+        proposal_cls[ proposal_ncl ] = pdpmlm_free( obj );
+        proposal_logp[ proposal_ncl ] = pdpmlm_movep( obj, grp, proposal_cls[ proposal_ncl ] );
         proposal_ncl++;
         pdpmlm_move( obj, grp, cls_old );
       }
@@ -325,7 +323,7 @@ void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
      
     // 5. print summary if requested every 20 iterations
     if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
-      pdpmlm_printf("iter: %u, ncl: %u, logp: %f\n", iter, obj->ncl, obj->logp );
+      pdpmlm_printf("iter: %u, ncl: %u, logp: %f, logp_best: %f\n", iter, obj->ncl, obj->logp, logp_best );
     }
     
   }
@@ -333,8 +331,8 @@ void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
   // 6. restore the best partition
   for( grp = 0; grp < obj->ngr; grp++ ) { 
     pdpmlm_move( obj, grp, vcl_best[ grp ] );  
-    obj->logp = pdpmlm_logp( obj );
   }
+  obj->logp = pdpmlm_logp( obj );
 
   if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }
 }
