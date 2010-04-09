@@ -252,7 +252,7 @@ void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
   if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
 }
 
-static unsigned  int rmulti( double * logp, unsigned int n ) {
+static unsigned int rmulti( double * logp, unsigned int n ) {
   unsigned int i, j, ret = 0;
   double pl, ph, u;
   u = pdpmlm_runif(0.0, 0.1);
@@ -272,7 +272,7 @@ static unsigned  int rmulti( double * logp, unsigned int n ) {
 void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
   unsigned int i, *vcl_best, cls, grp, iter = 0;
   unsigned int cls_old, cls_new, *proposal_cls, proposal_ncl;
-  double u, p, pcum, logp_best, *proposal_logp;
+  double stopcrit = DBL_MAX, logp_best, *proposal_logp;
 
   // 0. compute initial logp, save initial partition
   obj->logp = pdpmlm_logp( obj );
@@ -283,7 +283,7 @@ void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
   proposal_logp = (double*) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
   proposal_cls  = (unsigned int*) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
-  while( iter++ < maxiter ) {
+  while( iter++ < maxiter && stopcrit > crit ) {
   
     for( grp = 0; grp < obj->ngr; grp++ ) {
 
@@ -301,7 +301,6 @@ void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
         pdpmlm_move( obj, grp, cls_old );
         cls++;
       }
-
       if( obj->gcl[ obj->vcl[ grp ] ] > 1 ) { 
         proposal_cls[ proposal_ncl ] = pdpmlm_free( obj );
         proposal_logp[ proposal_ncl ] = pdpmlm_movep( obj, grp, proposal_cls[ proposal_ncl ] );
@@ -317,15 +316,19 @@ void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
    
     // 4. save best partition so far
     if( obj->logp > logp_best ) {
+      if( stopcrit == DBL_MAX ) { stopcrit = obj->logp - logp_best; }
+      else { stopcrit += obj->logp - logp_best; }
       logp_best = obj->logp;
       for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
     }
      
-    // 5. print summary if requested every 20 iterations
+    // 5. print summary if requested every iteration
     if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
       pdpmlm_printf("iter: %u, ncl: %u, logp: %f, logp_best: %f\n", iter, obj->ncl, obj->logp, logp_best );
     }
-    
+  
+    // 6. update stopping criterion
+    if(stopcrit != DBL_MAX) { stopcrit *= 0.95; }
   }
    
   // 6. restore the best partition
