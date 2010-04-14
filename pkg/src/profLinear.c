@@ -178,6 +178,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
   }
   //***********************************************************
 
+  if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }
   if( obj->flags & FLAG_VERBOSE ) {
     pdpmlm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
   }

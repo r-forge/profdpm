@@ -1,6 +1,8 @@
 profRand <- function( p1, p2 ) {
   ###################################################
   #do some argument checking
+  if( missing(p1) ) { stop("missing argument p1") }
+  if( missing(p2) ) { stop("missing argument p2") }
   if( !( "profLinear" %in% is( p1 ) ) ) { stop("p1 not of class \'profLinear\'") }
   if( !( "profLinear" %in% is( p2 ) ) ) { stop("p2 not of class \'profLinear\'") }  
   if( length( p1$clust) != length( p2$clust ) ) { stop("p1 and p2 lengths differ") }

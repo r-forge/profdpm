@@ -1,9 +1,6 @@
-- agglo method goes past 100% done when logp returns -Inf or Inf
 - add formula method to profLinear
-- check iter printing in pdpmlm_stoch
 - document lambda functionality
 - add min and max number of clusters option
-- optimize logp computation
 - add a summary method for profLinear
 - add a plot method for profLinear
 - group need not be ordered on call to profLinear C routine
