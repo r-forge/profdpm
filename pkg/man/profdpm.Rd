@@ -12,16 +12,14 @@ This package performs profile inference for a class of product partition models 
 Package: \tab profdpm\cr
 Type: \tab Package\cr
 Version: \tab 1.1\cr
-Date: \tab 2009-04-09\cr
+Date: \tab 2010-04-15\cr
 License: \tab GPL\cr
 LazyLoad: \tab yes\cr
 }
 Contents
 \itemize{
   \item{profLinear}{ Dirichlet process mixture of linear models }
-  \item{profRand}{ The Rand statistic for objects of class \sQuote{profLinear} }
-  \item{Rand}{ The Rand statistic }
-  \item{crbr08}{ The Cooper River Bridge Run 2008 dataset }
+  \item{pci}{ Partition Comparison Indices }
 }
 }
 \author{
