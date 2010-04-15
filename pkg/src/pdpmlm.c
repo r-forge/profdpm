@@ -458,7 +458,8 @@ void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
   cent = cent > 100 ? cent / 100 : 1;
 
   //repeat until all clusters are merged into one
-  while( obj->ncl > 1 && maxiter-- != 0 ) {
+  //while( obj->ncl > 1 && maxiter-- != 0 ) {
+  while( obj->ncl > 1 ) {
     //compute best merge
     del_best = -DBL_MAX;
     icls = 0;

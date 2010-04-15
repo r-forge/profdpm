@@ -2,5 +2,4 @@
 - document lambda functionality
 - add min and max number of clusters option
 - add a summary method for profLinear
-- add a plot method for profLinear
 - group need not be ordered on call to profLinear C routine
