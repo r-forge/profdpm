@@ -19,6 +19,7 @@ LazyLoad: \tab yes\cr
 Contents
 \itemize{
   \item{profLinear}{ Dirichlet process mixture of linear models }
+  \item{profBinary}{ Dirichelt process mixture of binary models }
   \item{pci}{ Partition Comparison Indices }
 }
 }
