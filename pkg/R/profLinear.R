@@ -77,7 +77,7 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   else{ rc <- clust[!miss] }
   if( any( miss ) ) {
     warning( "removed observations with missing values: ", 
-      paste(" ", (1:length(y))[miss], sep="") )
+      paste(" ", which(miss), sep="") )
   }
 
   ###################################################
@@ -88,8 +88,8 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   rg <- factor(rg)
   ord <- order(rg)
   ry <- as.double(ry[ord])
-  rg <- as.integer(unclass(rg[ord])-1)
-  if( !is.logical(rc) ) { rc <- as.integer(unclass(rc[ord])-1) }
+  rg <- unclass(rg[ord])-1
+  if( !is.logical(rc) ) { rc <- unclass(rc[ord])-1 }
 
   ###################################################
   rx <- as.matrix(x[ord,])
@@ -108,7 +108,7 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   ###################################################
   #call the C function
   ret <- .Call("profLinear", ry, rx, rg, rc, as.list(param), as.integer(method),
-                as.integer(maxiter), as.numeric(crit), as.logical(verbose), PACKAGE="profdpm")
+                as.integer(maxiter), as.double(crit), as.logical(verbose), PACKAGE="profdpm")
 
   ###################################################
   #undo ordering
@@ -116,9 +116,7 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   ret$x[ord,] <- ret$x
   ret$group[ord] <- ret$group
   ret$clust[ord] <- ret$clust
-  ret$clust <- unclass(as.factor(ret$clust))
-  attributes(ret$clust) <- NULL
+  #ret$clust <- unclass(as.factor(ret$clust))
+  #attributes(ret$clust) <- NULL
   return(ret)  
 }
-
-

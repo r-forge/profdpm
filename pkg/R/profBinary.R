@@ -51,12 +51,12 @@ profBinary <- function(y, clust, param, method="stochastic",
   ###################################################
   #remove missing observations, issue warning
   miss <- apply( is.na( y ), 1, any ) 
-  ry <- as.double(y[!miss,])
+  ry <- y[!miss,]
   if( is.logical(clust) ) { rc <- FALSE }
-  else{ rc <- as.integer(unclass(clust[!miss])-1) }
+  else{ rc <- unclass(clust[!miss])-1 }
   if( any( miss ) ) {
     warning( "removed observations with missing values: ", 
-      paste(" ", (1:length(y))[miss], sep="") )
+      paste(" ", which(miss), sep="") )
   }
 
   ###################################################
@@ -71,14 +71,18 @@ profBinary <- function(y, clust, param, method="stochastic",
   }
 
   ###################################################
+  #convert ry to integer storage
+  storage.mode(ry) <- "integer"
+
+  ###################################################
   #call the C function
   ret <- .Call("profBinary", ry, rc, as.list(param), as.integer(method),
-                as.integer(maxiter), as.numeric(crit), as.logical(verbose), 
+                as.integer(maxiter), as.double(crit), as.logical(verbose), 
                 PACKAGE="profdpm")
 
   ###################################################
   #adjust clust
-  ret$clust <- unclass(as.factor(ret$clust))
-  attributes(ret$clust) <- NULL
+  #ret$clust <- unclass(as.factor(ret$clust))
+  #attributes(ret$clust) <- NULL
   return(ret)  
 }

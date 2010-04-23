@@ -7,7 +7,7 @@ This function finds the most probable cluster partition in a Dirichlet process m
 }
 
 \usage{
-profLinear(y, clust, param, method="stochastic",
+profBinary(y, clust, param, method="stochastic",
            maxiter=1000, crit=1e-5, verbose=FALSE)
 }
 

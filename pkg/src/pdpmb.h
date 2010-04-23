@@ -81,7 +81,7 @@ unsigned int    q;    //ncol(y)
 //gqcl - number of 1s in the q'th column of the submatrix
 //of y corresponding to each cluster, corresponds to nkj
 //in model notation (length ngr*q)
-unsigned int ** gqcl;
+unsigned int  * gqcl;
 
 //a and b are temporary storage variables used to hold
 //posterior quantities

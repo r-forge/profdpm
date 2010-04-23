@@ -36,7 +36,7 @@ void pdpmb_add( pdpmb_t * obj, unsigned int grp, unsigned int cls ) {
   obj->gcl[ cls ] += 1;
   //(re)compute gqcl
   for( i = 0; i < obj->q; i++ ) {
-    obj->gqcl[ cls ][ i ] += obj->y[ grp * obj->q + i ];
+    obj->gqcl[ cls * obj->q + i ] += obj->y[ grp * obj->q + i ];
   }
 }
 
@@ -51,7 +51,7 @@ void pdpmb_sub( pdpmb_t * obj, unsigned grp, unsigned int cls ) {
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
   //recompute gqcl
   for( i = 0; i < obj->q; i++ ) {
-    obj->gqcl[ cls ][ i ] += obj->y[ grp * obj->q + i ];
+    obj->gqcl[ cls * obj->q + i ] -= obj->y[ grp * obj->q + i ];
   }
 }
 

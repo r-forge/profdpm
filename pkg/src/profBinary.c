@@ -27,7 +27,8 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
   setAttrib(retval, R_ClassSymbol, class);
   SET_VECTOR_ELT(retval, 0, y);
   SET_VECTOR_ELT(retval, 1, param);
-  SET_VECTOR_ELT(retval, 2, allocVector(INTSXP, LENGTH(y)));
+  dim = getAttrib(y, R_DimSymbol); 
+  SET_VECTOR_ELT(retval, 2, allocVector(INTSXP, INTEGER(dim)[ 0 ]));
 
   //1. Allocate obj, make assignments, check priors
   obj = (pdpmb_t *) R_alloc( 1, sizeof(pdpmb_t) );
@@ -38,8 +39,7 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
   if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
 
   //1.2 Set pointers to data
-  obj->y     = REAL(y);
-  dim        = getAttrib(y, R_DimSymbol); 
+  obj->y     = INTEGER(y);
   obj->ngr   = INTEGER(dim)[ 0 ];
   obj->q     = INTEGER(dim)[ 1 ];
 
@@ -94,10 +94,8 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
 
   //9. distribute clusters initially and perform optimization
   if( isInteger(clust) ) {
-    i = 0;
     for( j = 0; j < obj->ngr; j++ ) {
-      pdpmb_add( obj, j, INTEGER(clust)[i] );
-      i += obj->pgr[ j ];
+      pdpmb_add( obj, j, INTEGER(clust)[j] );
     }
   } 
   
@@ -146,12 +144,13 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
   cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 3), obj->pbuf[ cls ]-1, allocVector(REALSXP, obj->q));
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 4), obj->pbuf[ cls ]-1, allocVector(REALSXP, obj->q));
+    //FIXME obj->pbuf[ cls ] instead of i
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 3), i, allocVector(REALSXP, obj->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 4), i, allocVector(REALSXP, obj->q));
     for( j = 0; j < obj->q; j++ ) {
-      REAL(VECTOR_ELT(VECTOR_ELT(retval, 3), obj->pbuf[ cls ]-1))[j] = obj->a0 +\
+      REAL(VECTOR_ELT(VECTOR_ELT(retval, 3), i))[j] = obj->a0 +\
         obj->gqcl[ cls * obj->q + j ];
-      REAL(VECTOR_ELT(VECTOR_ELT(retval, 4), obj->pbuf[ cls ]-1))[j] = obj->b0 +\
+      REAL(VECTOR_ELT(VECTOR_ELT(retval, 4), i))[j] = obj->b0 +\
         obj->gcl[ cls ] - obj->gqcl[ cls * obj->q + j ];
     }
   }
