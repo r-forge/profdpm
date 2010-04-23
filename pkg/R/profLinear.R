@@ -88,8 +88,8 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   rg <- factor(rg)
   ord <- order(rg)
   ry <- as.double(ry[ord])
-  rg <- unclass(rg[ord])-1
-  if( !is.logical(rc) ) { rc <- unclass(rc[ord])-1 }
+  rg <- as.integer(unclass(rg[ord])-1)
+  if( !is.logical(rc) ) { rc <- as.integer(unclass(rc[ord])-1) }
 
   ###################################################
   rx <- as.matrix(x[ord,])

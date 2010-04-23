@@ -149,9 +149,9 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     SET_VECTOR_ELT(VECTOR_ELT(retval, 4), i, allocVector(REALSXP, obj->q));
     for( j = 0; j < obj->q; j++ ) {
       REAL(VECTOR_ELT(VECTOR_ELT(retval, 3), i))[j] = obj->a0 +\
-        obj->gqcl[ cls * obj->q + j ];
+        obj->gqcl[ FMAT(cls, j, obj->q) ];
       REAL(VECTOR_ELT(VECTOR_ELT(retval, 4), i))[j] = obj->b0 +\
-        obj->gcl[ cls ] - obj->gqcl[ cls * obj->q + j ];
+        obj->gcl[ cls ] - obj->gqcl[ FMAT(cls, j, obj->q) ];
     }
   }
   UNPROTECT(3);

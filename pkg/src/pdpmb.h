@@ -19,6 +19,16 @@
 //i <= j
 #define UMAT(i, j) (i + j * ( j + 1 ) / 2)
 
+//address symmetric full storage (by column) matrix
+//a00, a10, ..., an0, a01, a11, ..., an1, ...
+//0 <= i, j < n
+#define FMAT(i, j, n) (i + j * n)
+
+//address lower triangular packed storage matrix
+//a00, a10, ... ,an0, a11, a21, ..., an1, a22, a32, ...
+//0 <= j <= i < n
+#define LMAT(i, j, n) (i + j * ( 2 * n - j + 1 ) / 2)
+
 //absolute value
 #define ABS(x) (x < 0 ? -x : x)
 

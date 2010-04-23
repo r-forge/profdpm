@@ -164,25 +164,50 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   }
 
   //m = (s)^(-1) * m
-  //dspsv overwrites s, must reload s aftward.
+  //dppsv overwrites s, must reload s aftward.
   ipiv = (int *) obj->fbuf;
-  F77_CALL(dspsv)("U", (int *) &obj->q, &ione, s, ipiv, m, (int *) &obj->q, &info);
-  if( info > 0 ) { warning("dppsv: system is singular"); }
+  F77_CALL(dppsv)("U", (int *) &obj->q, &ione, s, m, (int *) &obj->q, &info);
   if( info < 0 ) { error("dppsv: invalid argument"); }
 
-  //d = 0.5*log|det(s)| (see dspsv/dsptrf documentation)
-  *d = 0.0;
-  for( i = 0; i < obj->q; i++ ) {
-    if( ipiv[ i ] > 0 ) {
-      *d += log( ABS( s[ UMAT(i, i) ] ) );
-    } else if( i > 0 && ipiv[ i ] < 0 && ipiv[ i-1 ] == ipiv[ i ] ) {
-      *d += log( ABS(
-        s[ UMAT(i-1,i-1) ] * s[ UMAT(i,i) ] -\
-        s[ UMAT(i-1,i) ] * s[ UMAT(i-1,i) ] )\
-      );
+  if( info > 0 ) {  
+    //load s with s0I + x'x, load m with s0m0 + x'y
+    index = 0;
+    for( i = 0; i < obj->q; i++ ) {
+      m[ i ] = obj->s0 * obj->m0[ i ] + obj->xycl[ cls ][ i ];
+      for( j = i; j < obj->q; j++ ) {
+        s[ index ] = obj->xxcl[ cls ][ index ];
+        if( j == i ) { s[ index ] += obj->s0; }
+        index++;
+      }
     }
+    //m = (s)^(-1) * m
+    //dspsv overwrites s, must reload s aftward.
+    ipiv = (int *) obj->fbuf;
+    F77_CALL(dspsv)("U", (int *) &obj->q, &ione, s, ipiv, m, (int *) &obj->q, &info);
+    if( info > 0 ) { warning("dspsv: system is singular"); }
+    if( info < 0 ) { error("dspsv: invalid argument"); }
+    //d = 0.5*log|det(s)| (see dspsv/dsptrf documentation)
+    *d = 0.0;
+    for( i = 0; i < obj->q; i++ ) {
+      if( ipiv[ i ] > 0 ) {
+        *d += log( ABS( s[ UMAT(i, i) ] ) );
+      } else if( i > 0 && ipiv[ i ] < 0 && ipiv[ i-1 ] == ipiv[ i ] ) {
+        *d += log( ABS(
+          s[ UMAT(i-1,i-1) ] * s[ UMAT(i,i) ] -\
+          s[ UMAT(i-1,i) ] * s[ UMAT(i-1,i) ] )\
+        );
+      }
+    }
+    *d *= 0.5;
+  } else {
+    //d = 0.5*log|det(s)| (see dppsv documentation)
+    *d = 0.0;
+    for( i = 0; i < obj->q; i++ ) {
+      *d += log( ABS( s[ UMAT(i, i) ] ) );
+    }
+    *d *= 0.5;
   }
-  *d *= 0.5;
+  
 
   //reload s
   index = 0;

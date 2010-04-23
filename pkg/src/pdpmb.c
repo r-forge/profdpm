@@ -36,7 +36,7 @@ void pdpmb_add( pdpmb_t * obj, unsigned int grp, unsigned int cls ) {
   obj->gcl[ cls ] += 1;
   //(re)compute gqcl
   for( i = 0; i < obj->q; i++ ) {
-    obj->gqcl[ cls * obj->q + i ] += obj->y[ grp * obj->q + i ];
+    obj->gqcl[ FMAT(cls, i, obj->q) ] += obj->y[ FMAT(grp, i, obj->q) ];
   }
 }
 
@@ -51,7 +51,7 @@ void pdpmb_sub( pdpmb_t * obj, unsigned grp, unsigned int cls ) {
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
   //recompute gqcl
   for( i = 0; i < obj->q; i++ ) {
-    obj->gqcl[ cls * obj->q + i ] -= obj->y[ grp * obj->q + i ];
+    obj->gqcl[ FMAT(cls, i, obj->q) ] -= obj->y[ FMAT(cls, i, obj->q) ];
   }
 }
 
@@ -83,9 +83,9 @@ double pdpmb_logpcls( pdpmb_t * obj, unsigned int cls ) {
   if( obj->gcl[ cls ] == 0 ) { return logp; }
   //compute posterior mass
   for( i = 0; i < obj->q; i++ ) {
-    logp += lgamma( obj->a0 + (double) obj->gqcl[ cls * obj->q + i ] ) +\
+    logp += lgamma( obj->a0 + (double) obj->gqcl[ FMAT(cls, i, obj->q) ] ) +\
             lgamma( obj->b0 + (double) obj->gcl[ cls ] -\
-            (double) obj->gqcl[ cls * obj->q + i ] ) -\
+            (double) obj->gqcl[ FMAT(cls, i, obj->q) ] ) -\
             lgamma( (double) obj->gcl[ cls ] + obj->a0 + obj->b0 );
   }
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }

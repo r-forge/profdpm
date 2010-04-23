@@ -219,7 +219,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     for( j = 0; j < obj->q; j++ ) {
       for( k = 0; k < obj->q; k++ ) {
         //FIXME this is too complicated
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ (j + k * obj->q) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ FMAT(j, k, obj->q) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
       }
     }
     cls++;
