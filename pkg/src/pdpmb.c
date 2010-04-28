@@ -36,7 +36,7 @@ void pdpmb_add( pdpmb_t * obj, unsigned int grp, unsigned int cls ) {
   obj->gcl[ cls ] += 1;
   //(re)compute gqcl
   for( i = 0; i < obj->q; i++ ) {
-    obj->gqcl[ FMAT(cls, i, obj->q) ] += obj->y[ FMAT(grp, i, obj->q) ];
+    obj->gqcl[ FMAT(cls, i, obj->ngr) ] += obj->y[ FMAT(grp, i, obj->ngr) ];
   }
 }
 
@@ -51,7 +51,7 @@ void pdpmb_sub( pdpmb_t * obj, unsigned grp, unsigned int cls ) {
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
   //recompute gqcl
   for( i = 0; i < obj->q; i++ ) {
-    obj->gqcl[ FMAT(cls, i, obj->q) ] -= obj->y[ FMAT(cls, i, obj->q) ];
+    obj->gqcl[ FMAT(cls, i, obj->ngr) ] -= obj->y[ FMAT(grp, i, obj->ngr) ];
   }
 }
 
@@ -83,9 +83,9 @@ double pdpmb_logpcls( pdpmb_t * obj, unsigned int cls ) {
   if( obj->gcl[ cls ] == 0 ) { return logp; }
   //compute posterior mass
   for( i = 0; i < obj->q; i++ ) {
-    logp += lgamma( obj->a0 + (double) obj->gqcl[ FMAT(cls, i, obj->q) ] ) +\
+    logp += lgamma( obj->a0 + (double) obj->gqcl[ FMAT(cls, i, obj->ngr) ] ) +\
             lgamma( obj->b0 + (double) obj->gcl[ cls ] -\
-            (double) obj->gqcl[ FMAT(cls, i, obj->q) ] ) -\
+            (double) obj->gqcl[ FMAT(cls, i, obj->ngr) ] ) -\
             lgamma( (double) obj->gcl[ cls ] + obj->a0 + obj->b0 );
   }
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
@@ -170,7 +170,7 @@ static unsigned int rmulti( double * logp, unsigned int n ) {
 }
 
 void pdpmb_gibbs( pdpmb_t * obj, int maxiter, double crit) {
-  unsigned int i, *vcl_best, cls, grp, iter = 0;
+  unsigned int i, *vcl_best, cls, grp, iter = 0, test;
   unsigned int cls_old, cls_new, *proposal_cls, proposal_ncl;
   double stopcrit = 1.0, logp_best, *proposal_logp;
 
@@ -179,7 +179,7 @@ void pdpmb_gibbs( pdpmb_t * obj, int maxiter, double crit) {
   logp_best = obj->logp;
   vcl_best = (unsigned int *) pdpmb_alloc( obj, obj->ngr, sizeof( unsigned int ) );
   for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
-  proposal_logp = (double*) pdpmb_alloc( obj, obj->ngr, sizeof( unsigned int ) );
+  proposal_logp = (double*) pdpmb_alloc( obj, obj->ngr, sizeof( double ) );
   proposal_cls  = (unsigned int*) pdpmb_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
   while( iter++ < maxiter && stopcrit > crit ) {
@@ -206,24 +206,20 @@ void pdpmb_gibbs( pdpmb_t * obj, int maxiter, double crit) {
       cls_new = proposal_cls[ rmulti( proposal_logp, proposal_ncl ) ];
       obj->logp += pdpmb_movep( obj, grp, cls_new );
     }
-
     //save
     if( obj->logp > logp_best ) {
       stopcrit += obj->logp - logp_best;
       logp_best = obj->logp;
       for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
     }
-
     //print summary if requested every iteration
     if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
       pdpmb_printf("iter: %u, ncl: %u, logp: %f, best: %f, crit: %f\n",\
                      iter, obj->ncl, obj->logp, logp_best, stopcrit );
     }
-
     //update stopping criterion
     if(stopcrit != DBL_MAX) { stopcrit *= 0.95; }
   }
-
   //restore
   obj->logp = logp_best;
   for( grp = 0; grp < obj->ngr; grp++ ) { 

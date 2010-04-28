@@ -8,7 +8,7 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
   SEXP maxiter, SEXP crit, SEXP verbose) {
   SEXP retval, elem, names, class, dim;
   pdpmb_t * obj;
-  int i, j, k, cls, onei=1; 
+  int i, j, k, cls, elt, onei=1; 
   double *xp, *yp, oned=1.0;
   unsigned int *buf;
 
@@ -134,6 +134,8 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
   REAL(VECTOR_ELT(retval, 5))[0] = obj->logp;
 
   for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_VCL; }
+
+  //10.1 remap cluster labels 1--ncl
   cls = 1;
   for( i = 0; i < obj->ngr; i++ ) { 
     if( obj->pbuf[ obj->vcl[ i ] ] == BAD_VCL ) { 
@@ -141,18 +143,20 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     }
     INTEGER(VECTOR_ELT(retval, 2))[i] = obj->pbuf[ obj->vcl[ i ] ];
   }
+
   cls = 0;
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
-    //FIXME obj->pbuf[ cls ] instead of i
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 3), i, allocVector(REALSXP, obj->q));
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 4), i, allocVector(REALSXP, obj->q));
+    elt = obj->pbuf[ cls ] - 1; /* remap cls */
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 3), elt, allocVector(REALSXP, obj->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 4), elt, allocVector(REALSXP, obj->q));
     for( j = 0; j < obj->q; j++ ) {
-      REAL(VECTOR_ELT(VECTOR_ELT(retval, 3), i))[j] = obj->a0 +\
-        obj->gqcl[ FMAT(cls, j, obj->q) ];
-      REAL(VECTOR_ELT(VECTOR_ELT(retval, 4), i))[j] = obj->b0 +\
-        obj->gcl[ cls ] - obj->gqcl[ FMAT(cls, j, obj->q) ];
+      REAL(VECTOR_ELT(VECTOR_ELT(retval, 3), elt))[j] = obj->a0 +\
+         obj->gqcl[ FMAT(cls, j, obj->ngr) ];
+      REAL(VECTOR_ELT(VECTOR_ELT(retval, 4), elt))[j] = obj->b0 +\
+         obj->gcl[ cls ] - obj->gqcl[ FMAT(cls, j, obj->ngr) ];
     }
+    cls++;
   }
   UNPROTECT(3);
   return retval;
