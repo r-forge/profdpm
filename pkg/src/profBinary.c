@@ -30,20 +30,20 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
   dim = getAttrib(y, R_DimSymbol); 
   SET_VECTOR_ELT(retval, 2, allocVector(INTSXP, INTEGER(dim)[ 0 ]));
 
-  //1. Allocate obj, make assignments, check priors
+  //allocate obj, make assignments, check priors
   obj = (pdpmb_t *) R_alloc( 1, sizeof(pdpmb_t) );
   obj->mem = sizeof(pdpmb_t);
 
-  //1.1 Set flags
+  //set flags
   obj->flags   = 0;
   if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
 
-  //1.2 Set pointers to data
+  //set pointers to data
   obj->y     = INTEGER(y);
   obj->ngr   = INTEGER(dim)[ 0 ];
   obj->q     = INTEGER(dim)[ 1 ];
 
-  //1.3 Check values in param list
+  //check values in param list
   elem       = getListElementByName(param, "lambda");
   if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->lam = 0; }
   else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
@@ -72,24 +72,12 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     obj->b0 = DEFAULT_B0;
   } else { obj->b0 = REAL(elem)[0]; }
 
-  //2. (Placeholder) 
-
-  //3. (Placeholder)
-
-  //4. Allocate and zero memory vcl, gcl, and ncl
+  //allocate and zero memory ncl, vcl, gcl, gqcl, pbuf
   obj->ncl = 0;
   obj->vcl = (unsigned int *) pdpmb_alloc( obj, obj->ngr, sizeof(unsigned int) );
   obj->gcl = (unsigned int *) pdpmb_zalloc( obj, obj->ngr, sizeof(unsigned int) );
   for( i = 0; i < obj->ngr; i++ ) { obj->vcl[ i ] = BAD_VCL; }
-
-  //5. (Placeholder)
-  
-  //6. (Placeholder)
-  
-  //7. allocate and zero gqcl
-  obj->gqcl = (unsigned int *) pdpmb_zalloc( obj, obj->ngr * obj->q, sizeof(double) );
-
-  //8. (Placeholder)
+  obj->gqcl = (unsigned int *) pdpmb_zalloc( obj, obj->ngr * obj->q, sizeof(unsigned int) );
   obj->pbuf = (unsigned int *) pdpmb_alloc( obj, obj->ngr, sizeof(unsigned int) ); 
 
   //9. distribute clusters initially and perform optimization

@@ -5,6 +5,7 @@ profBinary <- function(y, clust, param, method="stochastic",
   if(!is.numeric(y)) { 
     stop("y must be numeric") 
   }
+  #check y are all binary
   y <- as.matrix(y)
   if(missing(clust)) { 
     clust <- FALSE 
@@ -53,7 +54,7 @@ profBinary <- function(y, clust, param, method="stochastic",
   miss <- apply( is.na( y ), 1, any ) 
   ry <- y[!miss,]
   if( is.logical(clust) ) { rc <- FALSE }
-  else{ rc <- unclass(clust[!miss])-1 }
+  else{ rc <- as.integer(unclass(clust[!miss])-1) }
   if( any( miss ) ) {
     warning( "removed observations with missing values: ", 
       paste(" ", which(miss), sep="") )
@@ -82,7 +83,5 @@ profBinary <- function(y, clust, param, method="stochastic",
 
   ###################################################
   #adjust clust
-  #ret$clust <- unclass(as.factor(ret$clust))
-  #attributes(ret$clust) <- NULL
   return(ret)  
 }

@@ -2,10 +2,10 @@
 \alias{profdpm-package}
 \docType{package}
 \title{
-Profile Inference for the Dirichlet Process Mixture
+Profile Inference for Dirichlet Process Mixtures and Other Product Partition Models
 }
 \description{
-This package performs profile inference for a class of product partition models (PPM). The Dirichlet process mixture is a specific case in this class of PPMs. This method searches for the maximum posterior (MAP) estimate for the cluster partition in the PPM.
+This package facilitates profile inference (inference at the posterior mode) for a class of product partition models (\acronym{PPM}). The Dirichlet process mixture is a specific case in this class and is selected by default. These methods search for the maximum posterior (\acronym{MAP}) estimate for the cluster partition in the \acronym{PPM}.
 }
 \details{
 \tabular{ll}{
@@ -13,14 +13,14 @@ Package: \tab profdpm\cr
 Type: \tab Package\cr
 Version: \tab 1.1\cr
 Date: \tab 2010-04-15\cr
-License: \tab GPL\cr
+License: \tab GPL (>= 2)\cr
 LazyLoad: \tab yes\cr
 }
 Contents
 \itemize{
-  \item{profLinear}{ Dirichlet process mixture of linear models }
-  \item{profBinary}{ Dirichelt process mixture of binary models }
-  \item{pci}{ Partition Comparison Indices }
+  \item{\code{profLinear}}{ Linear Product Partition Models }
+  \item{\code{profBinary}}{ Binary Product Partition Models }
+  \item{\code{pci}}{ Partition Comparison Indices }
 }
 }
 \author{

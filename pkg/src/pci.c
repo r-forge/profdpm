@@ -44,14 +44,14 @@ SEXP pci( SEXP c1, SEXP c2 ) {
   PROTECT( names = allocVector( STRSXP, 5 ) );
   SET_STRING_ELT(names, 0, mkChar("R"));   //Rand
   SET_STRING_ELT(names, 1, mkChar("FM"));  //Fowlkes and Mallows
-  SET_STRING_ELT(names, 2, mkChar("W01")); //Wallace 01
-  SET_STRING_ELT(names, 3, mkChar("W10")); //Wallace 10
+  SET_STRING_ELT(names, 2, mkChar("W10")); //Wallace 10
+  SET_STRING_ELT(names, 3, mkChar("W01")); //Wallace 01
   SET_STRING_ELT(names, 4, mkChar("J"));   //Jaccard
   setAttrib(ret, R_NamesSymbol, names);
   REAL( ret )[ 0 ] =  (n11+n00)/(n11+n00+n10+n01);
   REAL( ret )[ 1 ] = n11 == 0.0 ? n11 : n11/sqrt((n11+n01)*(n11+n10));
-  REAL( ret )[ 2 ] = n11 == 0.0 ? n11 : n11/(n11+n01);
-  REAL( ret )[ 3 ] = n11 == 0.0 ? n11 : n11/(n11+n10);
+  REAL( ret )[ 2 ] = n11 == 0.0 ? n11 : n11/(n11+n10);
+  REAL( ret )[ 3 ] = n11 == 0.0 ? n11 : n11/(n11+n01);
   REAL( ret )[ 4 ] = n11 == 0.0 ? n11 : n11/(n11+n01+n10);
   UNPROTECT( 2 );
   return ret;
