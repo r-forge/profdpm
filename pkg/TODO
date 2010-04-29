@@ -1,5 +1,4 @@
 !Critical!
-- test for binary y in profBinary.R
 !Feature!
 - add formula method to profLinear
 - document lambda functionality

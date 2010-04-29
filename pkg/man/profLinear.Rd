@@ -34,7 +34,7 @@ profLinear(y, x, group, clust, param, method="stochastic",
 }
 
 \value{
-An instance of the class profLinear containing the following objects
+An instance of the class \code{profLinear} containing the following objects
 \item{y}{the numeric vector of observations, where missing observations (\code{NA}) are removed}
 \item{x}{the numeric matrix of covariates, where missing covariates (\code{NA}) are removed}
 \item{group}{the grouping vector, where missing group values (\code{NA}) are removed}

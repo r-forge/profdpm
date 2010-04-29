@@ -1,43 +1,31 @@
-#include "pdpmlm.h"
+#include "profdpm.h"
 
-void * pdpmlm_alloc( pdpmlm_t * obj, unsigned int count, unsigned int size ) {
-  obj->mem += count * size;
-  return R_alloc( count, size );
-} 
-
-void * pdpmlm_zalloc( pdpmlm_t * obj, unsigned int count, unsigned int size ) {
-  void * data = R_alloc( count, size );
-  char * start = (char *) data;
-  char * end = start + count * size;
-  do { *(start++) = 0; } while( start < end );
-  obj->mem += count * size;
-  return data;
-} 
-
-void pdpmlm_divy( pdpmlm_t * obj ) {
+void pdpmlm_divy( pdpm_t * obj ) {
+  pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
   unsigned int i, grp = 0, cls = 0, set = 0;
   double a, b;
-  pdpmlm_add( obj, grp, cls );
+  obj->add( obj, grp, cls );
   for( grp = 1; grp < obj->ngr; grp++ ) {
     for( cls = 0; cls < obj->ncl; cls++ ) {
-      pdpmlm_parm( obj, cls, obj->s, obj->m, &a, &b, &obj->d );
-      pdpmlm_add( obj, grp, cls );
-      pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b, &obj->d );
+      pdpmlm_parm( obj, cls, mdl->s, mdl->m, &a, &b, &mdl->d );
+      obj->add( obj, grp, cls );
+      pdpmlm_parm( obj, cls, mdl->s, mdl->m, &mdl->a, &mdl->b, &mdl->d );
       //Generally precision (a/b) is decreased with addition 
       //of a group to a cluster. We accept the addition when
       //the the precision changes by more than 0.95 fold
-      if( ( (obj->a / obj->b) / (a / b) ) > 0.95 ) { break; }
-      else { pdpmlm_sub( obj, grp, cls ); }
+      if( ( (mdl->a / mdl->b) / (a / b) ) > 0.95 ) { break; }
+      else { obj->sub( obj, grp, cls ); }
     }
-    if( cls == obj->ncl ) { pdpmlm_add( obj, grp, cls ); } 
+    if( cls == obj->ncl ) { obj->add( obj, grp, cls ); } 
   }
-  obj->logp = pdpmlm_logp( obj );
+  obj->logpval = obj->logp( obj );
   if( obj->flags & FLAG_VERBOSE ) {
-    pdpmlm_printf("initialized: logp: %f\n", obj->logp );
+    pdpm_printf("initialized: logp: %f\n", obj->logp );
   } 
 }
 
-void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
+void pdpmlm_add( pdpm_t * obj, unsigned int grp, unsigned int cls ) {
+  pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
   unsigned int i, j, index;
   if( grp >= obj->ngr || cls >= obj->ngr ) { 
     error( "pdpmlm_add: invalid argument: grp = %u cls = %u", grp, cls ); 
@@ -45,108 +33,89 @@ void pdpmlm_add( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
   //set vcl, recompute gcl, pcl, and possibly ncl
   obj->vcl[ grp ] = cls;
   if( obj->gcl[ cls ] == 0 ) { obj->ncl++; }
-  obj->pcl[ cls ] += obj->pgr[ grp ];
+  mdl->pcl[ cls ] += mdl->pgr[ grp ];
   obj->gcl[ cls ] += 1;
   //allocate and zero memory for xxcl and xycl if necessary
-  if( obj->xxcl[ cls ] == NULL ) {
-    obj->xxcl[ cls ] = (double *) pdpmlm_zalloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
-    obj->xycl[ cls ] = (double *) pdpmlm_zalloc( obj, obj->q, sizeof(double) );
-    obj->yycl[ cls ] = 0.0;
+  if( mdl->xxcl[ cls ] == NULL ) {
+    mdl->xxcl[ cls ] = (double *) pdpm_zalloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
+    mdl->xycl[ cls ] = (double *) pdpm_zalloc( obj, mdl->q, sizeof(double) );
+    mdl->yycl[ cls ] = 0.0;
   }
   //(re)compute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
   //use index here rather then UMAT(i, j) to avoid unnecessary index computation
   index = 0;
-  obj->yycl[ cls ] += obj->yygr[ grp ];
-  for( i = 0; i < obj->q; i++ ) {
-    obj->xycl[ cls ][ i ] += obj->xygr[ grp ][ i ];
-    for( j = i; j < obj->q; j++ ) {
-      obj->xxcl[ cls ][ index ] += obj->xxgr[ grp ][ index ];
+  mdl->yycl[ cls ] += mdl->yygr[ grp ];
+  for( i = 0; i < mdl->q; i++ ) {
+    mdl->xycl[ cls ][ i ] += mdl->xygr[ grp ][ i ];
+    for( j = i; j < mdl->q; j++ ) {
+      mdl->xxcl[ cls ][ index ] += mdl->xxgr[ grp ][ index ];
       index++;
     }
   }
 }
 
-void pdpmlm_sub( pdpmlm_t * obj, unsigned grp, unsigned int cls ) {
+void pdpmlm_sub( pdpm_t * obj, unsigned grp, unsigned int cls ) {
+  pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
   unsigned int i, j, index;
   if( grp >= obj->ngr || cls >= obj->ngr ) { 
     error( "pdpmlm_sub: invalid argument: grp = %u", grp ); 
   } 
   //set vcl, recompute gcl, and possibly ncl
   obj->vcl[ grp ] = BAD_VCL;
-  obj->pcl[ cls ] -= obj->pgr[ grp ];
+  mdl->pcl[ cls ] -= mdl->pgr[ grp ];
   obj->gcl[ cls ] -= 1;
   if( obj->gcl[ cls ] == 0 ) { obj->ncl--; }
   //recompute xxcl, xycl yycl for cls using xxgr, xygr, and yygr from grp
   //use index here rather then UMAT(i, j) to avoid unnecessary index computation
   index = 0;
-  obj->yycl[ cls ] -= obj->yygr[ grp ];
-  for( i = 0; i < obj->q; i++ ) {
-    obj->xycl[ cls ][ i ] -= obj->xygr[ grp ][ i ];
-    for( j = i; j < obj->q; j++ ) {
-      obj->xxcl[ cls ][ index ] -= obj->xxgr[ grp ][ index ];
+  mdl->yycl[ cls ] -= mdl->yygr[ grp ];
+  for( i = 0; i < mdl->q; i++ ) {
+    mdl->xycl[ cls ][ i ] -= mdl->xygr[ grp ][ i ];
+    for( j = i; j < mdl->q; j++ ) {
+      mdl->xxcl[ cls ][ index ] -= mdl->xxgr[ grp ][ index ];
       index++;
     }
   }
 }
 
-void pdpmlm_move( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
-  unsigned int old = obj->vcl[ grp ];
-  if( old == cls ) { return; }
-  if( old != BAD_VCL ) {
-    pdpmlm_sub( obj, grp, old );
-  }
-  pdpmlm_add( obj, grp, cls );
-}
-
-double pdpmlm_movep( pdpmlm_t * obj, unsigned int grp, unsigned int cls ) {
-  double logp = 0.0;
-  unsigned int only[2];
-  unsigned int old = obj->vcl[ grp ];
-  if( old == cls ) { return logp; }
-  only[0] = old;
-  only[1] = cls;
-  logp -= pdpmlm_logponly( obj, only, 2 );
-  pdpmlm_move( obj, grp, cls );
-  logp += pdpmlm_logponly( obj, only, 2 );
-  return logp;
-}
-
-double pdpmlm_logpcls( pdpmlm_t * obj, unsigned int cls ) {
+double pdpmlm_logpcls( pdpm_t * obj, unsigned int cls ) {
+  pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
   double logp = 0.0;
   if( obj->gcl[ cls ] == 0 ) { return logp; }
   //compute posterior statistics
-  pdpmlm_parm( obj, cls, obj->s, obj->m, &obj->a, &obj->b, &obj->d );
+  pdpmlm_parm( obj, cls, mdl->s, mdl->m, &mdl->a, &mdl->b, &mdl->d );
   //compute posterior mass
-  logp = lgamma( obj->a / 2 ) - ( obj->a / 2 ) * log( obj->b / 2 ) - obj->d;
+  logp = lgamma( mdl->a / 2 ) - ( mdl->a / 2 ) * log( mdl->b / 2 ) - mdl->d;
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
   else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->lam * lgamma( obj->gcl[ cls ] ); }
   return logp;
 }
 
 
-double pdpmlm_logp( pdpmlm_t * obj ) {
+double pdpmlm_logp( pdpm_t * obj ) {
   unsigned int i, cls = 0;
   double logp;
   logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
-    logp += pdpmlm_logpcls( obj, cls );
+    logp += obj->logpcls( obj, cls );
     cls++;
   }
   return logp;
 }
 
-double pdpmlm_logponly( pdpmlm_t * obj, unsigned int * only, unsigned int size ) {
+double pdpmlm_logponly( pdpm_t * obj, unsigned int * only, unsigned int size ) {
   unsigned int i;
   double logp;
   logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
   for( i = 0; i < size; i++ ) {
-    logp += pdpmlm_logpcls( obj, only[ i ] );
+    logp += obj->logpcls( obj, only[ i ] );
   }
   return logp;
 }
 
-void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b, double * d ) {
+void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b, double * d ) {
+  pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
   int i, j, index, ione=1, info, *ipiv;
   double done=1.0, dzero=0.0;
   if( obj->gcl[ cls ] == 0 ) { return; }
@@ -154,41 +123,41 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
 
   //load s with s0I + x'x, load m with s0m0 + x'y
   index = 0;
-  for( i = 0; i < obj->q; i++ ) {
-    m[ i ] = obj->s0 * obj->m0[ i ] + obj->xycl[ cls ][ i ];
-    for( j = i; j < obj->q; j++ ) {
-      s[ index ] = obj->xxcl[ cls ][ index ];
-      if( j == i ) { s[ index ] += obj->s0; }
+  for( i = 0; i < mdl->q; i++ ) {
+    m[ i ] = mdl->s0 * mdl->m0[ i ] + mdl->xycl[ cls ][ i ];
+    for( j = i; j < mdl->q; j++ ) {
+      s[ index ] = mdl->xxcl[ cls ][ index ];
+      if( j == i ) { s[ index ] += mdl->s0; }
       index++;
     }
   }
 
   //m = (s)^(-1) * m
   //dppsv overwrites s, must reload s aftward.
-  ipiv = (int *) obj->fbuf;
-  F77_CALL(dppsv)("U", (int *) &obj->q, &ione, s, m, (int *) &obj->q, &info);
+  ipiv = (int *) mdl->fbuf;
+  F77_CALL(dppsv)("U", (int *) &mdl->q, &ione, s, m, (int *) &mdl->q, &info);
   if( info < 0 ) { error("dppsv: invalid argument"); }
 
   if( info > 0 ) {  
     //load s with s0I + x'x, load m with s0m0 + x'y
     index = 0;
-    for( i = 0; i < obj->q; i++ ) {
-      m[ i ] = obj->s0 * obj->m0[ i ] + obj->xycl[ cls ][ i ];
-      for( j = i; j < obj->q; j++ ) {
-        s[ index ] = obj->xxcl[ cls ][ index ];
-        if( j == i ) { s[ index ] += obj->s0; }
+    for( i = 0; i < mdl->q; i++ ) {
+      m[ i ] = mdl->s0 * mdl->m0[ i ] + mdl->xycl[ cls ][ i ];
+      for( j = i; j < mdl->q; j++ ) {
+        s[ index ] = mdl->xxcl[ cls ][ index ];
+        if( j == i ) { s[ index ] += mdl->s0; }
         index++;
       }
     }
     //m = (s)^(-1) * m
     //dspsv overwrites s, must reload s aftward.
-    ipiv = (int *) obj->fbuf;
-    F77_CALL(dspsv)("U", (int *) &obj->q, &ione, s, ipiv, m, (int *) &obj->q, &info);
-    if( info > 0 ) { warning("dspsv: system is singular"); }
+    ipiv = (int *) mdl->fbuf;
+    F77_CALL(dspsv)("U", (int *) &mdl->q, &ione, s, ipiv, m, (int *) &mdl->q, &info);
+    if( info > 0 ) { obj->flags |= FLAG_SINGULA; }
     if( info < 0 ) { error("dspsv: invalid argument"); }
     //d = 0.5*log|det(s)| (see dspsv/dsptrf documentation)
     *d = 0.0;
-    for( i = 0; i < obj->q; i++ ) {
+    for( i = 0; i < mdl->q; i++ ) {
       if( ipiv[ i ] > 0 ) {
         *d += log( ABS( s[ UMAT(i, i) ] ) );
       } else if( i > 0 && ipiv[ i ] < 0 && ipiv[ i-1 ] == ipiv[ i ] ) {
@@ -202,337 +171,37 @@ void pdpmlm_parm( pdpmlm_t * obj, unsigned int cls, double * s, double * m, doub
   } else {
     //d = 0.5*log|det(s)| (see dppsv documentation)
     *d = 0.0;
-    for( i = 0; i < obj->q; i++ ) {
+    for( i = 0; i < mdl->q; i++ ) {
       *d += log( ABS( s[ UMAT(i, i) ] ) );
     }
     *d *= 0.5;
   }
   
-
   //reload s
   index = 0;
-  for( i = 0; i < obj->q; i++ ) {
-    for( j = i; j < obj->q; j++ ) {
-      s[ index ] = obj->xxcl[ cls ][ index ];
-      if( j == i ) { s[ index ] += obj->s0; }
+  for( i = 0; i < mdl->q; i++ ) {
+    for( j = i; j < mdl->q; j++ ) {
+      s[ index ] = mdl->xxcl[ cls ][ index ];
+      if( j == i ) { s[ index ] += mdl->s0; }
       index++;
     }
   }
 
   //b = b0 + y'y + s0*m0'm0 - m'sm
   //b = b0 + y'y
-  *b = obj->b0 + obj->yycl[ cls ];   
+  *b = mdl->b0 + mdl->yycl[ cls ];   
   //b += s0*m0'm0
-  *b += obj->s0*F77_CALL(ddot)( (int *) &obj->q, obj->m0, &ione, obj->m0, &ione);
-  //obj->fbuf = s*m
+  *b += mdl->s0*F77_CALL(ddot)( (int *) &mdl->q, mdl->m0, &ione, mdl->m0, &ione);
+  //mdl->fbuf = s*m
   //if info > 0, system is singualr, then dont allow 
   //correction for the mean (b -= m'sm). this could 
   //result in negative b! 
   if( info == 0 ) { 
-    F77_CALL(dspmv)("U", (int *) &obj->q, &done, s, m, &ione, &dzero, obj->fbuf, &ione);
-    //b -= m'obj->fbuf
-    *b -= F77_CALL(ddot)( (int *) &obj->q, m, &ione, obj->fbuf, &ione );
+    F77_CALL(dspmv)("U", (int *) &mdl->q, &done, s, m, &ione, &dzero, mdl->fbuf, &ione);
+    //b -= m'mdl->fbuf
+    *b -= F77_CALL(ddot)( (int *) &mdl->q, m, &ione, mdl->fbuf, &ione );
   } 
 
   //a = a0 + #values in cluster;
-  *a = obj->a0 + obj->pcl[ cls ];
-}
-
-unsigned int pdpmlm_free( pdpmlm_t * obj ) {
-  unsigned int cls = 0;
-  while( cls < obj->ngr && obj->gcl[ cls ] > 0 ) { cls++; }
-  if( cls == obj->ngr ) { cls = BAD_VCL; }
-  return cls;
-}
-
-void pdpmlm_best( pdpmlm_t * obj, unsigned int grp ) {
-  unsigned int i, test_cls, best_cls;
-  double test_delp=0, best_delp=0;
-  best_cls = obj->vcl[ grp ];
-
-  //try and empty cluster 
-  if( obj->gcl[ best_cls ] > 1 ) {
-    test_cls = pdpmlm_free( obj );
-    test_delp += pdpmlm_movep( obj, grp, test_cls );
-    if( test_delp > best_delp ) { 
-      best_delp = test_delp;
-      best_cls  = test_cls;
-    }
-  }
-  test_cls = 0;
-
-  //try existing clusters
-  for( i = 0; i < obj->ncl; i++ ) {
-    while( obj->gcl[ test_cls ] == 0 ) { test_cls++; }
-    test_delp += pdpmlm_movep( obj, grp, test_cls );
-    if( test_delp > best_delp ) { 
-      best_delp = test_delp;
-      best_cls  = test_cls;
-    }
-    test_cls++;
-  }
-  if( obj->vcl[ grp ] != best_cls ) { pdpmlm_move( obj, grp, best_cls ); }
-}
-
-static unsigned int rmulti( double * logp, unsigned int n ) {
-  unsigned int i, j, ret = 0;
-  double pl, ph, u;
-  u = pdpmlm_runif(0.0, 1.0);
-  pl = 0; 
-  for( i = 0; i < n; i++ ) {
-    ph = 0;
-    for( j = 0; j < n; j++ ) {
-      ph += exp( logp[ j ] - logp[ i ] );
-    }
-    ph = pl + 1/ph;
-    if( u > pl && u < ph ) { ret = i; }
-    pl = ph;
-  }
-  return ret;
-}
-
-void pdpmlm_gibbs( pdpmlm_t * obj, int maxiter, double crit) {
-  unsigned int i, *vcl_best, cls, grp, iter = 0;
-  unsigned int cls_old, cls_new, *proposal_cls, proposal_ncl;
-  double stopcrit = 1.0, logp_best, *proposal_logp;
-
-  //compute initial logp, save initial partition
-  obj->logp = pdpmlm_logp( obj );
-  logp_best = obj->logp;
-  vcl_best = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
-  for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
-  proposal_logp = (double*) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
-  proposal_cls  = (unsigned int*) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
-
-  while( iter++ < maxiter && stopcrit > crit ) {
-    for( grp = 0; grp < obj->ngr; grp++ ) {
-      cls_old = obj->vcl[ grp ];
-      //compute change in logp for possible moves
-      cls = 0;
-      proposal_ncl = 0;
-      for( i = 0; i < obj->ncl; i++ ) {
-        while( obj->gcl[ cls ] == 0 ) { cls++; }
-        proposal_logp[ i ] = pdpmlm_movep( obj, grp, cls );
-        proposal_cls[ i ] = cls;
-        proposal_ncl++;
-        pdpmlm_move( obj, grp, cls_old );
-        cls++;
-      }
-      if( obj->gcl[ obj->vcl[ grp ] ] > 1 ) { 
-        proposal_cls[ proposal_ncl ] = pdpmlm_free( obj );
-        proposal_logp[ proposal_ncl ] = pdpmlm_movep( obj, grp, proposal_cls[ proposal_ncl ] );
-        proposal_ncl++;
-        pdpmlm_move( obj, grp, cls_old );
-      }
-      //draw from the conditional
-      cls_new = proposal_cls[ rmulti( proposal_logp, proposal_ncl ) ];
-      obj->logp += pdpmlm_movep( obj, grp, cls_new );
-    }
-
-    //save
-    if( obj->logp > logp_best ) {
-      stopcrit += obj->logp - logp_best;
-      logp_best = obj->logp;
-      for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
-    }
-
-    //print summary if requested every iteration
-    if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
-      pdpmlm_printf("iter: %u, ncl: %u, logp: %f, best: %f, crit: %f\n",\
-                     iter, obj->ncl, obj->logp, logp_best, stopcrit );
-    }
-
-    //update stopping criterion
-    if(stopcrit != DBL_MAX) { stopcrit *= 0.95; }
-  }
-
-  //restore
-  obj->logp = logp_best;
-  for( grp = 0; grp < obj->ngr; grp++ ) { 
-    pdpmlm_move( obj, grp, vcl_best[ grp ] );  
-  }
-}
-
-
-void pdpmlm_stoch( pdpmlm_t * obj, int maxiter, double crit) {
-  unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls;
-  double logp_old, pdel = 1, pcum = 0;
-
-  //allocate memory for vcl_old, grps
-  vcl_old = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
-  grps    = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
-
-  //compute initial logp
-  obj->logp = pdpmlm_logp( obj );
-  while( iter++ < maxiter ) {
-
-    //select the number of groups to shuffle
-    ngrps = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
-    ngrps = ngrps == 0 ? 1 : ngrps;
-
-    //randomly select ngrps groups to shuffle, save indicators
-    for( i = 0; i < ngrps; i++ ) {
-      grps[ i ] = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
-      vcl_old[ i ] = obj->vcl[ grps[ i ] ];
-    }
-
-    //compute old logp, move groups to random cluster 
-    logp_old = obj->logp;
-    cls = (unsigned int) floor( obj->ngr * pdpmlm_runif( 0.0, 1.0 ) );
-    for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], cls ); }
-    obj->logp = pdpmlm_logp( obj );
-
-    if( obj->logp <= logp_old ) {  
-      //move each group to best cluster
-      for( i = 0; i < ngrps; i++ ) { pdpmlm_best( obj, grps[ i ] ); }
-      //compute logp, keep new clustering if better, else revert to old
-      obj->logp = pdpmlm_logp( obj );
-      if( obj->logp <= logp_old ) {    
-        for( i = 0; i < ngrps; i++ ) { pdpmlm_move( obj, grps[ i ], vcl_old[ i ] ); }
-        pdel *= 0.9;
-        obj->logp = logp_old;
-      }
-    }
-
-    //update the stopping criterion
-    else{ 
-      pdel = 0.5 * (obj->logp - logp_old) + 0.5 * pdel;
-      logp_old = obj->logp;
-    }
-    pcum += pdel;
-
-    //print summary if requested every 20 iterations
-    if( obj->flags & FLAG_VERBOSE && (iter % 1) == 0 ) {
-      pdpmlm_printf("iter: %u, ncl: %u, logp: %f, exp: %u, crit: %f\n",\
-                    iter, obj->ncl, logp_old, ngrps, pdel / pcum );
-    }
-
-    //check stopping criterion, break the optimization loop if met
-    if( pcum > 0 && ( pdel / pcum ) < crit ) {
-      obj->flags |= FLAG_OPTCRIT;
-      break;
-    }
-
-  }
-}
-
-void pdpmlm_merge( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 ) {
-  unsigned int i, grp = 0, size;
-  //cannot merge an empty group
-  if( obj->gcl[ cls1 ] == 0 || obj->gcl[ cls2 ] == 0 ) { return; }
-  size = obj->gcl[ cls1 ];
-  //merge the cluster
-  for( i = 0; i < size; i++ ) {
-    while( obj->vcl[ grp ] != cls1 ) { grp++; }
-    pdpmlm_move( obj, grp, cls2 );
-  }
-}    
-
-
-double pdpmlm_mergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 ) {
-  unsigned int only[2];
-  double del = 0.0;
-  //cannot merge an empty group
-  if( obj->gcl[ cls1 ] == 0 || obj->gcl[ cls2 ] == 0 ) { return 0.0; }
-  //merge the cluster
-  only[0] = cls2;
-  only[1] = cls1;
-  del -= pdpmlm_logponly( obj, only, 2 );
-  pdpmlm_merge( obj, cls1, cls2 );
-  del += pdpmlm_logponly( obj, only, 1 );
-  return del;
-}    
-
-double pdpmlm_testmergep( pdpmlm_t * obj, unsigned int cls1, unsigned int cls2 ) {
-  unsigned int grp = 0, testgrp, size;
-  double del = 0.0;
-
-  //enumerate groups in cls1 (cannot use pbuf elsewhere!!!)
-  size = obj->gcl[ cls1 ];
-  for( testgrp = 0; testgrp < size; testgrp++ ) {
-    while( obj->vcl[ grp ] != cls1 ) { grp++; }
-    obj->pbuf[ testgrp ] = grp++;
-  }
-
-  //merge clusters 
-  del = pdpmlm_mergep( obj, cls1, cls2 );
-
-  //unmerge clusters
-  for( testgrp = 0; testgrp < size; testgrp++ ) {
-    pdpmlm_move( obj, obj->pbuf[ testgrp ], cls1 );
-  }
-  return del;
-}
-
-void pdpmlm_agglo( pdpmlm_t * obj, int maxiter ) {
-  double *del, del_best, logp_best = -DBL_MAX;
-  unsigned int *vcl_best, i, j, index;
-  unsigned int icls, jcls, icls_best = BAD_VCL, jcls_best = BAD_VCL;
-  unsigned int icls_last = BAD_VCL, jcls_last = BAD_VCL;
-  int calcs = 0, cent;
-
-  //allocate some additional memory
-  //del[ i, j ] - upper triangular packed storage
-  del = (double *) pdpmlm_alloc( obj, ( obj->ngr * ( obj->ngr + 1 ) / 2 ), sizeof( double ) );
-  vcl_best = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
-
-  //compute initial logp 
-  obj->logp = pdpmlm_logp( obj );
-  //compute required calculations (and 1%)
-  cent = obj->ngr * ( obj->ngr - 1 ) + 1;
-  cent = cent > 100 ? cent / 100 : 1;
-
-  //repeat until all clusters are merged into one
-  //while( obj->ncl > 1 && maxiter-- != 0 ) {
-  while( obj->ncl > 1 ) {
-    //compute best merge
-    del_best = -DBL_MAX;
-    icls = 0;
-    for( i = 0; i < obj->ncl - 1; i++ ) {
-      while( obj->gcl[ icls ] == 0 ) { icls++; }
-      jcls = icls + 1;
-      for( j = 0; j < obj->ncl - i - 1; j++ ) {
-        while( obj->gcl[ jcls ] == 0 ) { jcls++; }
-        index = UMAT(icls, jcls);
-        if( obj->ncl == obj->ngr || icls == jcls_last || jcls == jcls_last ) { 
-          del[ index ] = pdpmlm_testmergep( obj, icls, jcls ); 
-          calcs++;
-          if( (obj->flags & FLAG_VERBOSE) && (calcs % cent == 0) ) {
-            pdpmlm_printf("\rpercent complete: %d%", calcs / cent); 
-          }
-        }
-        if( del[ index ] >= del_best ) {
-          del_best = del[ index ];
-          icls_best = icls;
-          jcls_best = jcls;
-        }
-        jcls++;
-      }
-      icls++;
-    }
-
-    //merge
-    pdpmlm_merge( obj, icls_best, jcls_best );
-    icls_last = icls_best;
-    jcls_last = jcls_best;
-    obj->logp += del_best;
-
-    //save
-    if( obj->logp > logp_best ) {
-      logp_best = obj->logp;
-      for( i = 0; i < obj->ngr; i++ ) { vcl_best[ i ] = obj->vcl[ i ]; }
-    }  
-  }
-
-  //restore
-  obj->logp = logp_best;
-  obj->flags |= FLAG_OPTCRIT;
-  for( i = 0; i < obj->ngr; i++ ) {
-    pdpmlm_move( obj, i, vcl_best[ i ] );
-  }
-
-  if( obj->flags & FLAG_VERBOSE ) { 
-    pdpmlm_printf("\rpercent complete: 100%\n");
-    pdpmlm_printf("ncl: %u logp: %f\n", obj->ncl, obj->logp);
-  }
+  *a = mdl->a0 + mdl->pcl[ cls ];
 }

@@ -1,14 +1,11 @@
-#include <R.h>
-#include <Rinternals.h>
-#include <Rmath.h>
-#include "util.h"
-#include "pdpmlm.h"
+#include "profdpm.h"
 
 
 SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
   SEXP param, SEXP method, SEXP maxiter, SEXP crit, SEXP verbose) {
   SEXP retval, elem, names, class, dim;
-  pdpmlm_t * obj;
+  pdpm_t * obj;
+  pdpmlm_t * mdl;
   int i, j, k, cls, onei=1; 
   double *xp, *yp, oned=1.0;
 
@@ -36,22 +33,27 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
   SET_VECTOR_ELT(retval, 4, allocVector(INTSXP, LENGTH(y)));
 
   //1. Allocate obj, make assignments, check priors
-  obj = (pdpmlm_t *) R_alloc( 1, sizeof(pdpmlm_t) );
-  obj->mem = sizeof(pdpmlm_t);
+  obj = (pdpm_t *) R_alloc( 1, sizeof(pdpm_t) );
+  obj->mem = sizeof(pdpm_t);
 
-  //1.1 Set flags
+  //allocate model, convenience pointer
+  obj->model = (pdpmlm_t *) pdpm_alloc(obj, 1, sizeof(pdpmlm_t));
+  mdl = obj->model;
+
+
+  //set flags
   obj->flags   = 0;
   if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
 
-  //1.2 Set pointers to data
-  obj->y     = REAL(y);
-  obj->x     = REAL(x);
-  obj->vgr   = (unsigned int *) INTEGER(group);
-  dim        = getAttrib(x, R_DimSymbol); 
-  obj->p     = INTEGER(dim)[ 0 ];
-  obj->q     = INTEGER(dim)[ 1 ];
+  //set pointers to data
+  mdl->y   = REAL(y);
+  mdl->x   = REAL(x);
+  mdl->vgr = (unsigned int *) INTEGER(group);
+  dim             = getAttrib(x, R_DimSymbol); 
+  mdl->p   = INTEGER(dim)[ 0 ];
+  mdl->q   = INTEGER(dim)[ 1 ];
 
-  //1.3 Check values in param list
+  //check values in param list
   elem       = getListElementByName(param, "lambda");
   if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->lam = 0; }
   else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
@@ -67,120 +69,129 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
   } else { obj->alp = REAL(elem)[0]; }
   elem       = getListElementByName(param, "s0");
   if( elem == R_NilValue ) {
-    obj->s0 = DEFAULT_S0;
+    mdl->s0 = DEFAULT_LM_S0;
   } else if( REAL(elem)[0] <= 0 ) {
     warning( "list item \"s0\" must be positive, using default value" );
-    obj->s0 = DEFAULT_S0;
-  } else { obj->s0 = REAL(elem)[0]; }
+    mdl->s0 = DEFAULT_LM_S0;
+  } else { mdl->s0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "m0");
   if( elem == R_NilValue ) {
-    obj->m0 = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) ); 
-    for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
-  } else if ( LENGTH(elem) < obj->q ) {
+    mdl->m0 = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) ); 
+    for( i = 0; i < mdl->q; i++ ) { mdl->m0[i] = DEFAULT_LM_M0; }
+  } else if ( LENGTH(elem) < mdl->q ) {
     warning( "list item \"m0\" should be of length ncol(x), using default values" );
-    obj->m0 = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
-    for( i = 0; i < obj->q; i++ ) { obj->m0[i] = DEFAULT_M0; }
-  } else { obj->m0 = REAL(elem); }
+    mdl->m0 = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
+    for( i = 0; i < mdl->q; i++ ) { mdl->m0[i] = DEFAULT_LM_M0; }
+  } else { mdl->m0 = REAL(elem); }
   elem       = getListElementByName(param, "a0");
   if( elem == R_NilValue ) { 
-    obj->a0 = DEFAULT_A0;
+    mdl->a0 = DEFAULT_LM_A0;
   } else if( REAL(elem)[0] <= 0 ) {
     warning( "list item \"a0\" must be positive, using default value" );
-    obj->a0 = DEFAULT_A0;
-  } else { obj->a0 = REAL(elem)[0]; }
+    mdl->a0 = DEFAULT_LM_A0;
+  } else { mdl->a0 = REAL(elem)[0]; }
   elem       = getListElementByName(param, "b0");
   if( elem == R_NilValue ) {
-    obj->b0 = DEFAULT_B0;
+    mdl->b0 = DEFAULT_LM_B0;
   } else if( REAL(elem)[0] < 0 ) {
     warning( "list item \"b0\" must be nonnegative, using default value" );
-    obj->b0 = DEFAULT_B0;
-  } else { obj->b0 = REAL(elem)[0]; }
+    mdl->b0 = DEFAULT_LM_B0;
+  } else { mdl->b0 = REAL(elem)[0]; }
  
-  //2. Allocate memory for pgr
-  obj->pgr = (unsigned int *) pdpmlm_zalloc( obj, obj->p, sizeof(unsigned int) );
+  //set pointers to methods
+  obj->divy = &pdpmlm_divy;
+  obj->add  = &pdpmlm_add;
+  obj->sub  = &pdpmlm_sub;
+  obj->logpcls = &pdpmlm_logpcls;
+  obj->logp = &pdpmlm_logp;
+  obj->logponly = &pdpmlm_logponly;
 
-  //3. Compute pgr, ngr
+  //allocate memory for pgr
+  mdl->pgr = (unsigned int *) pdpm_zalloc( obj, mdl->p, sizeof(unsigned int) );
+
+  //compute pgr, ngr
   obj->ngr = 0;
-  for( i = 0; i < obj->p; i++ ) { obj->pgr[ obj->vgr[ i ] ]++; }
-  for( i = 0; i < obj->p; i++ ) { if( obj->pgr[ i ] > 0 ) { obj->ngr++; } }
+  for( i = 0; i < mdl->p; i++ ) { mdl->pgr[ mdl->vgr[ i ] ]++; }
+  for( i = 0; i < mdl->p; i++ ) { if( mdl->pgr[ i ] > 0 ) { obj->ngr++; } }
 
-  //4. Allocate and zero memory vcl, gcl, pcl, and ncl
+  //allocate and zero memory vcl, gcl, pcl, and ncl
   obj->ncl = 0;
-  obj->vcl = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-  obj->gcl = (unsigned int *) pdpmlm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
-  obj->pcl = (unsigned int *) pdpmlm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
+  obj->vcl = (unsigned int *) pdpm_alloc( obj, obj->ngr, sizeof(unsigned int) );
+  obj->gcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
   for( i = 0; i < obj->ngr; i++ ) { obj->vcl[ i ] = BAD_VCL; }
+  mdl->pcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
 
-  //5. Allocate and zero memory for xxgr xygr, and yygr
-  obj->xxgr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
-  obj->xygr = (double **) pdpmlm_alloc( obj, obj->ngr, sizeof(double *) );
-  obj->yygr = (double *)  pdpmlm_alloc( obj, obj->ngr, sizeof(double) );
+  //allocate and zero memory for xxgr xygr, and yygr
+  mdl->xxgr = (double **) pdpm_alloc( obj, obj->ngr, sizeof(double *) );
+  mdl->xygr = (double **) pdpm_alloc( obj, obj->ngr, sizeof(double *) );
+  mdl->yygr = (double *)  pdpm_alloc( obj, obj->ngr, sizeof(double) );
   for( i = 0; i < obj->ngr; i++ ) {
     //xxgr is symmetric packed
-    obj->xxgr[ i ] = (double *) pdpmlm_zalloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
-    obj->xygr[ i ] = (double *) pdpmlm_zalloc( obj, obj->q, sizeof(double) );
-    obj->yygr[i] = 0.0;
+    mdl->xxgr[ i ] = (double *) pdpm_zalloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
+    mdl->xygr[ i ] = (double *) pdpm_zalloc( obj, mdl->q, sizeof(double) );
+    mdl->yygr[i] = 0.0;
   }
   
-  //6. Compute xxgr, xygr, yygr
-  for( i = 0; i < obj->p; i++ ) {
-    xp = obj->x + i;
-    yp = obj->y + i; 
+  //compute xxgr, xygr, yygr
+  for( i = 0; i < mdl->p; i++ ) {
+    xp = mdl->x + i;
+    yp = mdl->y + i; 
     //xxgr += xx' , symmetric packed
-    F77_CALL(dspr)("U", (int *) &obj->q, &oned, xp, (int *) &obj->p, obj->xxgr[ obj->vgr[ i ] ] );
+    F77_CALL(dspr)("U", (int *) &mdl->q, &oned, xp, (int *) &mdl->p, mdl->xxgr[ mdl->vgr[ i ] ] );
     //xygr += xy
-    F77_CALL(daxpy)((int *) &obj->q, yp, xp, (int *) &obj->p, obj->xygr[ obj->vgr[ i ] ], &onei); 
+    F77_CALL(daxpy)((int *) &mdl->q, yp, xp, (int *) &mdl->p, mdl->xygr[ mdl->vgr[ i ] ], &onei); 
     //yygr += yy
-    obj->yygr[ obj->vgr[ i ] ] += (*yp) * (*yp);
+    mdl->yygr[ mdl->vgr[ i ] ] += (*yp) * (*yp);
   }
   
-  //7. allocate and zero xxcl, xycl, yycl
-  obj->xxcl = (double **) pdpmlm_zalloc( obj, obj->ngr, sizeof(double *) );
-  obj->xycl = (double **) pdpmlm_zalloc( obj, obj->ngr, sizeof(double *) );
-  obj->yycl = (double *)  pdpmlm_zalloc( obj, obj->ngr, sizeof(double) );
+  //allocate and zero xxcl, xycl, yycl
+  mdl->xxcl = (double **) pdpm_zalloc( obj, obj->ngr, sizeof(double *) );
+  mdl->xycl = (double **) pdpm_zalloc( obj, obj->ngr, sizeof(double *) );
+  mdl->yycl = (double *)  pdpm_zalloc( obj, obj->ngr, sizeof(double) );
 
-  //8. allocate s, m, fbuf, and pbuf
+  //allocate s, m, fbuf, and pbuf
   //s is symmetric packed
-  obj->s = (double *) pdpmlm_alloc( obj, ( obj->q * ( obj->q + 1 ) ) / 2, sizeof(double) );
-  obj->m = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
-  obj->fbuf = (double *) pdpmlm_alloc( obj, obj->q, sizeof(double) );
-  obj->pbuf = (unsigned int *) pdpmlm_alloc( obj, obj->ngr, sizeof(unsigned int) );
+  mdl->s = (double *) pdpm_alloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
+  mdl->m = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
+  mdl->fbuf = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
+  obj->pbuf = (unsigned int *) pdpm_alloc( obj, obj->ngr, sizeof(unsigned int) );
 
   //9. distribute clusters initially and perform optimization
   if( isInteger(clust) ) {
     i = 0;
     for( j = 0; j < obj->ngr; j++ ) {
-      pdpmlm_add( obj, j, INTEGER(clust)[i] );
-      i += obj->pgr[ j ];
+      obj->add( obj, j, INTEGER(clust)[i] );
+      i += mdl->pgr[ j ];
     }
   } 
   
   //***********************************************************
   if( INTEGER(method)[0] == METHOD_NONE ) {
-    if( isLogical(clust) ) { pdpmlm_divy( obj ); }
-    obj->logp = pdpmlm_logp( obj );
+    if( isLogical(clust) ) { obj->divy( obj ); }
+    obj->logpval = obj->logp( obj );
   }
   else if( INTEGER(method)[0] == METHOD_STOCH ) {
-    if( isLogical(clust) ) { pdpmlm_divy( obj ); }
+    if( isLogical(clust) ) { obj->divy( obj ); }
     GetRNGstate();
-    pdpmlm_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+    method_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
     PutRNGstate();
   }
   else if( INTEGER(method)[0] == METHOD_GIBBS ) {
-    if( isLogical(clust) ) { pdpmlm_divy( obj ); }
+    if( isLogical(clust) ) { obj->divy( obj ); }
     GetRNGstate();
-    pdpmlm_gibbs( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
+    method_gibbs( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
     PutRNGstate();
   }
   else if( INTEGER(method)[0] == METHOD_AGGLO ) {
-    if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { pdpmlm_add( obj, i, i ); } }
-    pdpmlm_agglo( obj, INTEGER(maxiter)[0] );
+    if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { obj->add( obj, i, i ); } }
+    method_agglo( obj, INTEGER(maxiter)[0] );
   }
   //***********************************************************
 
   if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }
+  if( obj->flags & FLAG_SINGULA ) { warning("optimization singularities detected"); }
   if( obj->flags & FLAG_VERBOSE ) {
-    pdpmlm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
+    pdpm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
   }
 
   //10. complete the return value
@@ -189,43 +200,42 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
   SET_VECTOR_ELT(retval, 7, allocVector(VECSXP, obj->ncl)); //m
   SET_VECTOR_ELT(retval, 8, allocVector(VECSXP, obj->ncl)); //s
   SET_VECTOR_ELT(retval, 9, allocVector(REALSXP, 1)); //logp
-  REAL(VECTOR_ELT(retval, 9))[0] = obj->logp;
+  REAL(VECTOR_ELT(retval, 9))[0] = obj->logpval;
 
   for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_VCL; }
   cls = 1;
-  for( i = 0; i < obj->p; i++ ) { 
-    if( obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] == BAD_VCL ) { 
-      obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ] = cls++;
+  for( i = 0; i < mdl->p; i++ ) { 
+    if( obj->pbuf[ obj->vcl[ mdl->vgr[ i ] ] ] == BAD_VCL ) { 
+      obj->pbuf[ obj->vcl[ mdl->vgr[ i ] ] ] = cls++;
     }
-    INTEGER(VECTOR_ELT(retval, 4))[i] = obj->pbuf[ obj->vcl[ obj->vgr[ i ] ] ];
+    INTEGER(VECTOR_ELT(retval, 4))[i] = obj->pbuf[ obj->vcl[ mdl->vgr[ i ] ] ];
   }
   cls = 0;
   for( i = 0; i < obj->ncl; i++) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1, allocVector(REALSXP, obj->q*obj->q));
-    SET_VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1, allocVector(REALSXP, obj->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1, allocVector(REALSXP, mdl->q*mdl->q));
+    SET_VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1, allocVector(REALSXP, mdl->q));
     PROTECT(dim = allocVector(INTSXP, 2));
-    INTEGER(dim)[0] = obj->q;
-    INTEGER(dim)[1] = obj->q;
+    INTEGER(dim)[0] = mdl->q;
+    INTEGER(dim)[1] = mdl->q;
     setAttrib(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1), R_DimSymbol, dim);
 
-    pdpmlm_parm( obj, cls, obj->s,\
+    pdpmlm_parm( obj, cls, mdl->s,\
         REAL(VECTOR_ELT(VECTOR_ELT(retval, 7), obj->pbuf[ cls ]-1)),\
         REAL(VECTOR_ELT(retval, 5))+obj->pbuf[ cls ]-1,\
         REAL(VECTOR_ELT(retval, 6))+obj->pbuf[ cls ]-1,\
-        &obj->d\
+        &mdl->d\
     );
     //copy obj->s (packed) to R matrix (full)
-    for( j = 0; j < obj->q; j++ ) {
-      for( k = 0; k < obj->q; k++ ) {
+    for( j = 0; j < mdl->q; j++ ) {
+      for( k = 0; k < mdl->q; k++ ) {
         //FIXME this is too complicated
-        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ FMAT(j, k, obj->q) ] = obj->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
+        REAL(VECTOR_ELT(VECTOR_ELT(retval, 8), obj->pbuf[ cls ]-1))[ FMAT(j, k, mdl->q) ] = mdl->s[ j <= k ? UMAT(j, k) : UMAT(k, j) ];
       }
     }
     cls++;
   }
  
-
   UNPROTECT(3+obj->ncl);
   return retval;
 }

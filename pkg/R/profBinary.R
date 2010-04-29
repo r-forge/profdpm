@@ -2,33 +2,26 @@ profBinary <- function(y, clust, param, method="stochastic",
                        maxiter=1000, crit=1e-5, verbose=FALSE) {
   ###################################################
   #do some argument checking
-  if(!is.numeric(y)) { 
+  if(!is.numeric(y))
     stop("y must be numeric") 
-  }
-  #check y are all binary
   y <- as.matrix(y)
-  if(missing(clust)) { 
+  if(missing(clust)) {
     clust <- FALSE 
-  }
-  else { 
+  } else { 
     clust <- as.factor(clust)
-    if(nrow(y) != length(clust)) { 
-      stop("nrow(y) must equal length(clust)") 
-    } 
+    if(nrow(y) != length(clust))
+      stop("nrow(y) must equal length(clust)")  
   }
-  if(missing(param)) { 
+  if(missing(param)) {
     param <- list(alpha=1,a0=1.00,b0=1.00) 
-  }
-  else if(!is.list(param)) {
+  } else if(!is.list(param)) {
     warning("param must be a list, using defaults")
     param <- list(alpha=1,a0=1.00,b0=1.00) 
-  } 
-  else{
+  } else {
     if(length(names(param)) == 0) {
       warning("param argument does not include any named items, using defaults")
       param <- list(alpha=1,a0=1.00,b0=1.00)
-    }
-    else if(length(param) > length(names(param))) {
+    } else if(length(param) > length(names(param))) {
       warning("param contains unnamed items")
     }
   }
@@ -54,7 +47,7 @@ profBinary <- function(y, clust, param, method="stochastic",
   miss <- apply( is.na( y ), 1, any ) 
   ry <- y[!miss,]
   if( is.logical(clust) ) { rc <- FALSE }
-  else{ rc <- as.integer(unclass(clust[!miss])-1) }
+  else { rc <- as.integer(unclass(clust[!miss])-1) }
   if( any( miss ) ) {
     warning( "removed observations with missing values: ", 
       paste(" ", which(miss), sep="") )
@@ -72,8 +65,11 @@ profBinary <- function(y, clust, param, method="stochastic",
   }
 
   ###################################################
-  #convert ry to integer storage
+  #convert ry to integer storage, 
+  #check that all are binary
   storage.mode(ry) <- "integer"
+  if( any( (ry != 1L) & (ry != 0L) ) )
+    stop("y must contain only 0s and 1s")
 
   ###################################################
   #call the C function

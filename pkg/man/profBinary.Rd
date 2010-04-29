@@ -32,7 +32,7 @@ profBinary(y, clust, param, method="stochastic",
 }
 
 \value{
-An instance of the class profLinear containing the following objects
+An instance of the class \code{profBinary} containing the following objects
 \item{y}{the numeric matrix of observations, where rows with missing observations (\code{NA}) are removed}
 \item{param}{the list of prior parameters}
 \item{clust}{a numeric vector of integers indicating cluster membership for each non-missing observation}
@@ -42,7 +42,7 @@ An instance of the class profLinear containing the following objects
 }
 
 \details{
-This function fits a Dirichlet process mixture of binary models (\acronym{DPMBM}) using the profile method. This method will group the observations into clusters. The clusters are determined by maximizing the marginal posterior distribution over the space of possible clusters. Each cluster has an associated binary model. The binary model assigns Bernoulli probabilities independently to each binary valued outcome, corresponding to the columns of \code{y}. Each cluster has a unique set of outcome probabilities. 
+This function fits a Dirichlet process mixture of binary models (\acronym{DPMBM}) using the profile method. This method will cluster binary observations vectors (rows of \code{y}) into clusters. The cluster partition is estimated by maximizing the marginal posterior distribution over all possible cluster partitions. Each cluster has an associated binary model. The binary model assigns Bernoulli probabilities independently to each binary valued outcome, corresponding to the columns of \code{y}. The prior parameters \code{a0} and \code{b0} assign a beta prior distribution to each outcome probability. Conditional on the estimated cluster partition, each outcome probability is beta distributed \emph{a posteriori}. The function \code{profBinary} returns the associated posterior parameters of the beta destribution for each cluster and outcome probability.  
 
 Missing observations (\code{NA}) are removed automatically and a warning is issued. The return value contains the reduced observation matrix.
 
