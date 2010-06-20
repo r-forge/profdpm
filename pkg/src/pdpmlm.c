@@ -138,7 +138,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
   F77_CALL(dppsv)("U", (int *) &mdl->q, &ione, s, m, (int *) &mdl->q, &info);
   if( info < 0 ) { error("dppsv: invalid argument"); }
 
-  if( info > 0 ) {  
+  if( info > 0 ) { //not numerically pd 
     //load s with s0I + x'x, load m with s0m0 + x'y
     index = 0;
     for( i = 0; i < mdl->q; i++ ) {
