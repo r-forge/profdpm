@@ -18,6 +18,8 @@
 #define DEBUG pdpm_printf("F: %s, C: %u\n", __FUNCTION__, __COUNTER__)
 /* log(sqrt(2*pi)) == log(2*pi)/2 */
 #define LN_SQRT_2PI 0.918938533204672741780329736406
+/* log(2) */
+#define LN_2 0.69314718055994530941
 #define rlcat_runif runif
 
 /* stats */
@@ -147,6 +149,12 @@ double       method_movep( pdpm_t * obj, unsigned int grp, unsigned int cls );
 unsigned int method_free( pdpm_t * obj );
 //Move group grp to the best fitting cluster
 void         method_best( pdpm_t * obj, unsigned int grp );
+//Simple split along vcl[grp1], vcl[grp2]
+void         method_ssplit( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned int cls);
+//Simple split along vcl[grp1], vcl[grp2], return resulting change in logp
+double       method_ssplitp( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned int cls);
+//Simple split along vcl[grp1], vcl[grp2], return resulting change in logp, unssplit
+double       method_testssplitp( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned int cls);
 //Merge cluster cls1 into cluster cls2
 void         method_merge( pdpm_t * obj, unsigned int cls1, unsigned int cls2 );
 //Merge cluster cls1 into cluster cls2, return the resulting change in logp

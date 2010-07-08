@@ -74,6 +74,69 @@ void method_best( pdpm_t * obj, unsigned int grp ) {
   }
 }
 
+void method_ssplit( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned int cls) {
+  unsigned int grp = 0, size, cls_old, i;
+  //cannot split the same group
+  if( grp1 == grp2 ) return;
+  //cannot split already different groups
+  if( obj->vcl[grp1] != obj->vcl[grp2] ) return;
+  //cannot split to same clusters
+  if( obj->vcl[grp1] == cls || obj->vcl[grp2] == cls ) return 0.0;
+  method_move( obj, grp1, cls );
+  cls_old = obj->vcl[ grp2 ];
+  size = obj->gcl[ cls_old ];
+  //split the remaining members uniformly at random
+  for( i = 0; i < size; i++ ) { 
+    while( obj->vcl[ grp ] != cls_old ) grp++;
+    if( pdpm_runif( 0.0, 1.0 ) <= 0.5 )
+      method_move( obj, grp, cls );
+  }
+}
+  
+double method_ssplitp( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned int cls) {
+  unsigned int only[2];
+  double del;
+  //cannot split the same group
+  if( grp1 == grp2 ) return 0.0;
+  //cannot split already different groups
+  if( obj->vcl[grp1] != obj->vcl[grp2] ) return 0.0;
+  //cannot split to same clusters
+  if( obj->vcl[grp1] == cls || obj->vcl[grp2] == cls ) return 0.0;
+  only[0] = obj->vcl[grp1];
+  only[1] = cls;
+  del -= obj->logponly( obj, only, 1 );
+  method_ssplit( obj, grp1, grp2, cls );
+  del += obj->logponly( obj, only, 2 );
+  return del;
+} 
+
+double method_testssplitp( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned int cls ) {
+  unsigned int grp = 0, testgrp, size, cls_old;
+  double del = 0.0;
+
+  //cannot split the same group
+  if( grp1 == grp2 ) return 0.0;
+  //cannot split already different groups
+  if( obj->vcl[grp1] != obj->vcl[grp2] ) return 0.0;
+  //cannot split to same clusters
+  if( obj->vcl[grp1] == cls || obj->vcl[grp2] == cls ) return 0.0;
+
+  //enumerate groups in cls_old (cannot use pbuf elsewhere!!!)
+  cls_old = obj->vcl[ grp2 ];
+  size = obj->gcl[ cls_old ];
+  for( testgrp = 0; testgrp < size; testgrp++ ) {
+    while( obj->vcl[ grp ] != cls_old ) { grp++; }
+    obj->pbuf[ testgrp ] = grp++;
+  }
+
+  //ssplit && unssplit
+  del = method_ssplitp( obj, grp1, grp2, cls );
+  for( testgrp = 0; testgrp < size; testgrp++ ) {
+    method_move( obj, obj->pbuf[ testgrp ], cls_old );
+  }
+  return del;
+}
+
 void method_merge( pdpm_t * obj, unsigned int cls1, unsigned int cls2 ) {
   unsigned int i, grp = 0, size;
   //cannot merge an empty group
@@ -313,3 +376,63 @@ void method_agglo( pdpm_t * obj, int maxiter ) {
     pdpm_printf("ncl: %u logp: %f\n", obj->ncl, obj->logpval);
   }
 }
+
+/* method_spmer (simple and restricted split-merge)
+   Jain S and Neil R (2004) A Split-Merge Markov Chain Monte 
+   Carlo Procedure for the Dirichlet Process Mixture Model.
+   JCGS 13(1) 158-182. 
+   
+void method_spmer(pdpm_t * obj, int maxiter, double crit, int simple) {
+  //strategy: iterate over the following steps:
+  // 1. select grp1, grp2, uniformly at random from {0, ngr-1}
+  // 2. split if(grp1 == grp2) or merge if(grp1 != grp2) (simple or restricted)
+  // 3. evaluate MH acceptance probability, accept or regect move
+
+  unsigned int grp1, grp2, i, split = 0, n1, n2, cls_old, cls_new;
+  //unsigned int testgrp, grp, size;
+  double logp_old, del, mhlogp;
+  logp_old = obj->logp( obj );
+  for( i = 0; i < maxiter; i++ ) {
+    grp1 = (unsigned int) floor( obj->ngr * pdpm_runif( 0.0 , 1.0 ) );
+    do grp2 = (unsigned int) floor( obj->ngr * pdpm_runif( 0.0 , 1.0 ) );
+    while( grp2 == grp1 && (obj->ngr > 1) );
+    split = ( obj->vcl[ grp1 ] == obj->vcl[ grp2 ] );
+
+    //store group data
+    //cls_old = obj->vcl[ grp1 ];
+    //size = obj->gcl[ cls_old ];
+    //for( testgrp = 0; testgrp < size; testgrp++ ) {
+    //  while( obj->vcl[ grp ] != cls_old ) { grp++; }
+    //  obj->pbuf[ testgrp ] = grp++;
+    //}
+
+    if( split ) {
+      cls_old = obj->vcl[ grp1 ];
+      cls_new = method_free( obj );
+      del = simple ? method_testssplitp( obj, grp1, grp2, cls_new )\
+                   : method_testrsplitp( obj, grp1, grp2, cls_new );
+      n1 = obj->gcl[ cls_old ];
+      n2 = obj->gcl[ cls_new ];
+      mhlogp = simple ? del + (n1 + n2 - 2) * LN_2\
+                      : del + (n1 + n2 - 2) * LN_2; //FIXME need restricted mhlogp here
+    } else {
+      n1 = obj->gcl[ obj->vcl[ grp1 ];
+      n2 = obj->gcl[ obj->vcl[ grp2 ];
+      del = method_testmergep( obj, obj->vcl[ grp1 ], obj->vcl[ grp2 ] );
+      mhlogp = del - (n1 + n2 - 2) * LN_2;
+    }
+
+    //accept MH move
+    if( mklogp >= 0 || mklogp >= log( pdpm_runif( 0.0, 1.0 ) ) ) {
+      if( split ) {
+        if( simple ) method_ssplit( obj, grp1, grp2, cls_new );
+        else method_rsplit( obj, grp1, grp2, cls_new );
+      } else {
+        method_merge( obj, obj->vcl[ grp1 ], obj->vcl[ grp2 ] );
+      }
+      obj->logp += del;
+    }
+  }
+}
+
+*/
