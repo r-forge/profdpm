@@ -13,14 +13,14 @@ profBinary <- function(y, clust, param, method="stochastic",
       stop("nrow(y) must equal length(clust)")  
   }
   if(missing(param)) {
-    param <- list(alpha=1,a0=1.00,b0=1.00) 
+    param <- list(alpha=1/150,a0=1.00,b0=1.00) 
   } else if(!is.list(param)) {
     warning("param must be a list, using defaults")
-    param <- list(alpha=1,a0=1.00,b0=1.00) 
+    param <- list(alpha=1/150,a0=1.00,b0=1.00) 
   } else {
     if(length(names(param)) == 0) {
       warning("param argument does not include any named items, using defaults")
-      param <- list(alpha=1,a0=1.00,b0=1.00)
+      param <- list(alpha=1/150,a0=1.00,b0=1.00)
     } else if(length(param) > length(names(param))) {
       warning("param contains unnamed items")
     }

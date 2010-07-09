@@ -49,14 +49,14 @@ SEXP         getListElementByName(SEXP list, const char * name);
 
 //pdpm defaults
 #define DEFAULT_LAM    0.000
-#define DEFAULT_ALP    1.000
+#define DEFAULT_ALP    0.006666667
 #define BAD_VCL UINT_MAX
 
 //pdpmlm defaults
-#define DEFAULT_LM_A0     0.001
-#define DEFAULT_LM_B0     0.001
+#define DEFAULT_LM_A0     1.000
+#define DEFAULT_LM_B0     1.000
 #define DEFAULT_LM_M0     0.000
-#define DEFAULT_LM_S0     1.000
+#define DEFAULT_LM_S0     0.100
 
 //pdpmbm defaults
 #define DEFAULT_BM_A0     1.000

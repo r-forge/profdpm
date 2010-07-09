@@ -35,16 +35,16 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
     }
   }
   if(missing(param)) { 
-    param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000) 
+    param <- list(alpha=1/150,a0=1,b0=1,m0=rep(0,ncol(x)),s0=0.1) 
   }
   else if(!is.list(param)) {
     warning("param must be a list, using defaults")
-    param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000)
+    param <- list(alpha=1/150,a0=1,b0=1,m0=rep(0,ncol(x)),s0=0.1)
   } 
   else{
     if(length(names(param)) == 0) {
       warning("param argument does not include any named items, using defaults")
-      param <- list(alpha=1,a0=0.001,b0=0.001,m0=rep(0,ncol(x)),s0=1.000)
+      param <- list(alpha=1/150,a0=1,b0=1,m0=rep(0,ncol(x)),s0=0.1)
     }
     else if(length(param) > length(names(param))) {
       warning("param contains unnamed items")
