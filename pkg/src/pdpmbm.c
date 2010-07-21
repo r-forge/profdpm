@@ -56,14 +56,14 @@ double pdpmbm_logpcls( pdpm_t * obj, unsigned int cls ) {
             lgamma( (double) obj->gcl[ cls ] + mdl->a0 + mdl->b0 );
   }
   if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
-  else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->lam * lgamma( obj->gcl[ cls ] ); }
+  else { logp += obj->lam * lgamma( obj->gcl[ cls ] + 1 ); }
   return logp;
 }
 
 double pdpmbm_logp( pdpm_t * obj ) {
   unsigned int i, cls = 0;
   double logp;
-  logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
+  logp = obj->ncl * log( obj->alp );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
     logp += obj->logpcls( obj, cls );
@@ -75,7 +75,7 @@ double pdpmbm_logp( pdpm_t * obj ) {
 double pdpmbm_logponly( pdpm_t * obj, unsigned int * only, unsigned int size ) {
   unsigned int i;
   double logp;
-  logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
+  logp = obj->ncl * log( obj->alp );
   for( i = 0; i < size; i++ ) {
     logp += obj->logpcls( obj, only[ i ] );
   }

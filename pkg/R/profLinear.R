@@ -1,5 +1,5 @@
 profLinear <- function(y, x, group, clust, param, method="stochastic", 
-                       maxiter=1000, crit=1e-5, verbose=FALSE) {
+                       maxiter=1000, crit=1e-6, verbose=FALSE) {
   ###################################################
   #do some argument checking
   if(!is.numeric(y)) { 

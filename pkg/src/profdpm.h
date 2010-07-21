@@ -48,7 +48,7 @@ SEXP         getListElementByName(SEXP list, const char * name);
 #define ABS(x) (x < 0 ? -x : x)
 
 //pdpm defaults
-#define DEFAULT_LAM    0.000
+#define DEFAULT_LAM    1.000
 #define DEFAULT_ALP    0.006666667
 #define BAD_VCL UINT_MAX
 

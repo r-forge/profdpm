@@ -55,9 +55,10 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
 
   //check values in param list
   elem       = getListElementByName(param, "lambda");
-  if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->lam = 0; }
-  else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
-    warning( "list item \"lambda\" must be between zero and one, using default value" );
+  if( elem == R_NilValue ) { 
+    obj->lam = DEFAULT_LAM; 
+  } else if( REAL(elem)[0] < -1 || REAL(elem)[0] > 1 ) {
+    warning( "list item \"lambda\" must be between -1 and 1, using default value" );
     obj->lam = DEFAULT_LAM;
   } else { obj->lam = REAL(elem)[0]; }
   elem       = getListElementByName(param, "alpha");

@@ -1,7 +1,7 @@
 \documentclass[article]{jss}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% declarations for jss.cls %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% declarations for jss.cls %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% almost as usual
@@ -108,7 +108,7 @@ Product partition models are often selected to be conjugate in $\phi_k$, giving 
 
 The \pkg{profdpm} package computes a MAP estimate for two types of PPMs, corresponding to the \code{profLinear} and \code{profBinary} functions. Both functions accept data and model fitting arguments, and return an estimate of the cluster partition and other information necessary for profile inference. 
 
-\subsection[R Code]{R Code}
+\subsection[R Code]{\proglang{R} Code}
 
 The \code{profLinear} function fits a product partition of conjugate normal linear models:
 \begin{eqnarray}
@@ -126,13 +126,13 @@ y_{ij} | z_i = k, \phi_{kj} & \sim & B(\phi_{kj}) \nonumber \\
 \end{eqnarray}
 where $y_{ij}$ for $j = 1,\ldots,q$ is the $j^{th}$ binary observation for a subject $i$, $B$ represents the Bernoulli distribution with probability $\phi_{kj}$, and $b$ represents the beta distribution with shape parameters $a_0$ and $b_0$. Conditional on an estimated partition, $\phi_{kj}$ is independently beta distributed {\it a posteriori} with shape parameters $a_{kj}$ and $b_{kj}$. The \code{profBinary} function returns the estimated cluster partition as well as the posterior statistics $a_{kj}$ and $b_{kj}$.
 
-\subsection[C Code]{C Code}
-Each of the three methods used to compute a MAP estimate of the PPM partition (see section \ref{PPMs}) utilizes a Markov-like process. That is, a partition state is initialized, and then updated sequentially, where the updated state depends on the previous state. Each of the MAP estimation methods may be broken into a small number of simple operations on the partition state, for example, reassigning a single observation from one cluster to another in the partition, or computing the log posterior mass at the given partition state. Hence, the methods for MAP estimation are generically applicable to all product partition models, provided these operations are available. The task of applying the methods generically involves writing functions that perform these simple operations for each supported PPM type ({\it e.g.} for product partitions of linear or binary models).
+\subsection[C Code]{\proglang{C} Code}
+Each of the three methods used to compute a MAP estimate of the PPM partition (see section \ref{PPMs}) utilizes a Markov-like process. That is, a partition state is initialized, and then updated sequentially, where the updated state depends on the previous state. Each of the MAP estimation methods may be broken into two simple operations on the partition state: reassigning a single observation from one cluster to another in the partition, and computing the log posterior mass at the given partition state. Hence, the methods for MAP estimation are generically applicable to all product partition models, provided these operations are defined. The task of applying the methods generically involves writing functions that perform these simple operations for each supported PPM type ({\it e.g.} for product partitions of linear or binary models).
 
 Each supported PPM has an associated \proglang{C} structure containing data arrays, variables for model fitting parameters, and pointers to functions that perform the simple operations necessary for MAP estimation. These structures hold the partition state, and their references are passed to and from the MAP estimation methods. Additional PPMs may be supported by defining new structures and the associated functions to perform simple operations on the partition. Readers interested in extending the \pkg{profdpm} package to support additional PPMs are encouraged to explore the \pkg{profdpm} source code, available via the Comprehensive R Archive Network (CRAN).
 
-\section[Examples]{Examples} \label{Examples}
-The following code example simulates a dataset consisting of three linear subgroups. The goal of this analysis is to recover the subgroup partition and perform profile inference on the slope parameter of each cluster. The following \proglang{R} snippet creates the simulated dataset.
+\section[Examples]{Examples: \code{profLinear}} \label{Examples:profLinear}
+The following code example simulates a dataset consisting of three linear subgroups. The goal of this analysis is to recover the subgroup partition and perform profile inference on the slope parameter of each cluster. The following \proglang{R} snippet creates and fits the simulated dataset.
 <<>>=
 #simulate data with 3 linear subgroups
 x <- as.matrix(runif(99))
@@ -140,18 +140,17 @@ y <- c(0*x[1:33], 10*x[34:66], 20*x[67:99]) + rnorm(99)
 
 #estimate linear partition
 library(profdpm)
-fit <- profLinear(y, x)
+fit1 <- profLinear(y, x)
 @
 
-Next, the data are presented in a scatterplot. For each cluster identified by the estimated partition, the (profile) posterior mean slope is represented by a line with intercept zero. A $95\%$ credible interval for the slope is represented by two lines with slopes corresponding to the $0.025$ and $0.975$ quantiles of the (profile) posterior distribution over the slope parameter. These quantiles are computed using a parametric bootstrap
-
+Next, the data are presented in a scatterplot. For each cluster identified by the estimated partition, the (profile) posterior mean slope is represented by a line with intercept zero. A $95\%$ credible interval for the slope is represented by two lines with slopes corresponding to the $0.025$ and $0.975$ quantiles of the (profile) posterior distribution over the slope parameter. These quantiles are computed using a parametric bootstrap.
 \begin{center}
 <<fig=TRUE>>=
 plot(x, y)
 #plot mean line, bootstrap 95% credible lines
 B <- 10000 #bootstrap size
-attach(fit, warn.conflicts=FALSE)
-for(i in 1:length(fit$m)) {
+attach(fit1, warn.conflicts=FALSE)
+for(i in 1:length(m)) {
     abline(a=0,b=m[[i]],lty=2, col=i)
     tboot <- rgamma(B, a[[i]]/2, b[[i]]/2)
     mboot <- rnorm(B, m[[i]], 1/sqrt(s[[i]]*tboot))
@@ -159,11 +158,95 @@ for(i in 1:length(fit$m)) {
     abline(a=0,b=qboot[1], col=i)
     abline(a=0,b=qboot[2], col=i)
 }
-detach(fit)
+detach(fit1)
 @
 \end{center}
 
-%% Note: If there is markup in \(sub)section, then it has to be escape as above.
+The \code{profLinear} function may also accommodate non-linear subgroups, under suitable transformations of the covariate. The following example simulates two subgroups with \code{sinc} mean functions.
+<<>>=
+#simulate data with 2 non-linear subgroups
+sinc <- function(x) sin(pi*x)/(pi*x)
+x <- as.matrix(runif(100))
+y <- c(20*sinc(2*x[1:50]), 20*sinc(5*x[51:100]))+rnorm(100)
+X <- cbind(sinc(2*x), sinc(5*x))
+
+#estimate partition
+library(profdpm)
+fit2 <- profLinear(y, X)
+@
+
+The next code block generates a scatterplot of the simulated data, overlaid with the profile posterior mean functions for each cluster. A pointwise $95\%$ credible interval for the mean function is computed using a parametric bootstrap.
+\begin{center}
+<<fig=TRUE>>=
+plot(x, y)
+#plot mean curve, bootstrap 95% credible lines
+B <- 10000 #bootstrap size
+attach(fit2, warn.conflicts=FALSE)
+for(i in 1:length(m)) {
+    xplot <- seq(0.001, 1, length.out=100)
+    mplot <- cbind(sinc(2*xplot), sinc(5*xplot)) %*% m[[i]]
+    tboot <- rgamma(B, a[[i]]/2, b[[i]]/2)
+    mboot <- matrix(rnorm(2*B, 0, 1/sqrt(tboot)),ncol=2)
+    mboot <- mboot %*% chol(solve(s[[i]])) 
+    mboot <- mboot + outer(rep(1,B),m[[i]])
+    Xplot <- cbind(sinc(2*xplot), sinc(5*xplot))
+    Mplot <- mboot %*% t(Xplot)
+    Cred  <- apply(Mplot, 2, quantile, probs=c(0.025,0.975))
+    lines(xplot, mplot, col=i, lty=2)
+    lines(xplot, Cred[1,], col=i, lty=1)
+    lines(xplot, Cred[2,], col=i, lty=1)
+}
+detach(fit2)
+@
+\end{center}
+
+In each of the above examples, the \code{pci} function may be used to compute several measures of agreement between the simulated and estimated partitions. The following demonstrates the use of \code{pci}.
+<<>>=
+simulatedPart1 <- rep(1:3, rep(33,3))
+estimatedPart1 <- fit1$clust
+pci(simulatedPart1, estimatedPart1)
+simulatedPart2 <- rep(1:2, rep(50,2))
+estimatedPart2 <- fit2$clust
+pci(simulatedPart2, estimatedPart2)
+@
+
+The first value in the vector returned by \code{pci} corresponds to the \citet{Rand1971} index for the two partitions. This statistic enumerates the proportion of observations pairs that are clustered concordantly in the two partitions. A Rand index value of one indicates perfect agreement. Inference about these statistics is difficult, partly because a null hypothesis about the partition is rarely well defined. However, the \code{pci} function may be used to contruct bootstrap tests using the Rand index (or another index) as a test statistic.
+
+In both of the previous examples, every observation is clustered individually. However, if some observations are known to be clustered beforehand, this information should be used. This occurs, for example, in timecourse experiments, where each `subject' is observed repeatedly over time or another covariate. An investigator may wish to cluster \emph{subjects} with similar linear trends over time. Hence, all observations corresponding to a single subject should always be grouped together. Grouping observations {\it apriori} may decrease the variance of the profile posterior distribution, and/or greatly reduce the complexity of MAP estimation. A grouping factor may be passed to \code{profLinear} using the \code{group} argument. 
+
+\section[Examples]{Examples: \code{profBinary}} \label{Examples:profBinary}
+The following \proglang{R} code chunk simulates a multiple binary outcome dataset. The cells of each row in the dataset correspond to multiple binary observations on a single `subject'.
+<<>>=
+#simulate three subgroups probabilities
+p1 <- c(0.99, 0.50, 0.01)
+p2 <- rep(0.50,3)
+p3 <- rev(p1)
+y1 <- matrix(rbinom(99, 1, p1), 33, 3, TRUE)
+y2 <- matrix(rbinom(99, 1, p2), 33, 3, TRUE)
+y3 <- matrix(rbinom(99, 1, p3), 33, 3, TRUE)
+y  <- rbind(y1, y2, y3)
+
+#fit the binary model
+fitb <- profBinary(y)
+@
+
+The \code{pci} function may again be used to quantify the agreement between the simulated and estimated partitions.
+<<>>=
+simulatedPartB <- rep(1:3, rep(33,3))
+estimatedPartB <- fitb$clust
+pci(simulatedPartB, estimatedPartB)
+@
+
+As mentioned above, the outcome probabilities for each cluster are beta distributed {\it a posteriori}. The parameters of the posterior distributions may be accessed in the return value of \code{profBinary}. For example, the following \proglang{R} code block computes and prints the posterior mean for the outcome probabilities in each cluster.
+<<>>=
+attach(fitb, warn.conflicts=FALSE)
+for(i in 1:length(a)) {
+    probs <- format(a[[i]]/(a[[i]]+b[[i]]), digits=2, nsmall=3L)
+    probs <- paste(probs, collapse=" ")
+    cat(paste("cluster", i, probs, "\n"))
+}
+detach(fitb)
+@
 
 \bibliography{profdpm}
 \end{document}

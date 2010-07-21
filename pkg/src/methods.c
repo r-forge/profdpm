@@ -81,7 +81,7 @@ void method_ssplit( pdpm_t * obj, unsigned int grp1, unsigned int grp2, unsigned
   //cannot split already different groups
   if( obj->vcl[grp1] != obj->vcl[grp2] ) return;
   //cannot split to same clusters
-  if( obj->vcl[grp1] == cls || obj->vcl[grp2] == cls ) return 0.0;
+  if( obj->vcl[grp1] == cls || obj->vcl[grp2] == cls ) return;
   method_move( obj, grp1, cls );
   cls_old = obj->vcl[ grp2 ];
   size = obj->gcl[ cls_old ];

@@ -86,8 +86,7 @@ double pdpmlm_logpcls( pdpm_t * obj, unsigned int cls ) {
   pdpmlm_parm( obj, cls, mdl->s, mdl->m, &mdl->a, &mdl->b, &mdl->d );
   //compute posterior mass
   logp = lgamma( mdl->a / 2 ) - ( mdl->a / 2 ) * log( mdl->b / 2 ) - mdl->d;
-  if( obj->flags & FLAG_DIRICHL ) { logp += lgamma( obj->gcl[ cls ] ); }
-  else { logp += lgamma( obj->gcl[ cls ] + 1 ) - obj->lam * lgamma( obj->gcl[ cls ] ); }
+  logp += obj->lam * lgamma( obj->gcl[ cls ] );
   return logp;
 }
 
@@ -95,7 +94,7 @@ double pdpmlm_logpcls( pdpm_t * obj, unsigned int cls ) {
 double pdpmlm_logp( pdpm_t * obj ) {
   unsigned int i, cls = 0;
   double logp;
-  logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
+  logp = obj->ncl * log( obj->alp );
   for( i = 0; i < obj->ncl; i++ ) {
     while( obj->gcl[ cls ] == 0 ) { cls++; }
     logp += obj->logpcls( obj, cls );
@@ -107,7 +106,7 @@ double pdpmlm_logp( pdpm_t * obj ) {
 double pdpmlm_logponly( pdpm_t * obj, unsigned int * only, unsigned int size ) {
   unsigned int i;
   double logp;
-  logp = obj->ncl * log( obj->alp ) - obj->lam * lgamma( obj->ncl + 1 );
+  logp = obj->ncl * log( obj->alp );
   for( i = 0; i < size; i++ ) {
     logp += obj->logpcls( obj, only[ i ] );
   }
