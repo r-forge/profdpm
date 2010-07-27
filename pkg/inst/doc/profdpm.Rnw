@@ -5,21 +5,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% almost as usual
-\author{Matthew S. Shotwell\\Medical University of South Carolina \And 
-        Elizabeth H. Slate\\Medical University of South Carolina}
+\author{Matthew S. Shotwell\\Medical University of South Carolina}
 \title{\pkg{profdpm}: An \proglang{R} package for MAP Estimation in a Class of Product Partition Models}
 
 %% for pretty printing and a nice hypersummary also set:
-\Plainauthor{Matthew S. Shotwell, Elizabeth H. Slate} %% comma-separated
+\Plainauthor{Matthew S. Shotwell} %% comma-separated
 \Plaintitle{profdpm: An R package for MAP Estimation in a Class of Product Partition Models} %% without formatting
 %\Shorttitle{MAP Estimation in a Class of Product Partition Models} %% a short title (if necessary)
 
 %% an abstract and keywords
 \Abstract{
-  The abstract of the article.
+The \pkg{profdpm} package facilitates profile inference, or inference at the posterior mode for a class of product partition models (PPM). The Dirichlet process mixture is represented as a specific case in this class, and is the default. The PPM is implemented for linear models and multivariate binary models. Several methods are implemented to search for the maximum posterior (MAP) estimate of the cluster partition in the PPM. This article introduces the relevant theory, discusses the \proglang{R} and \proglang{C} implementation, and provides examples of the high level functionality.
 }
-\Keywords{keywords, comma-separated, not capitalized, \proglang{Java}}
-\Plainkeywords{keywords, comma-separated, not capitalized, Java} %% without formatting
+\Keywords{product partition model, MAP estimate, clustering, \proglang{R}, \proglang{C}}
+\Plainkeywords{product partition model, MAP estimate, clustering, R, C} %% without formatting
 %% at least one keyword must be supplied
 
 %% publication information
@@ -73,9 +72,9 @@
 \begin{document}
 
 \section[Intro]{Introduction}
-\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2010}. This package facilitates profile inference (inference at the posterior mode) in a class of product partition models (PPM). The class of PPMs considered herein was motivated, and has as a special case, a PPM formulation of the Dirichlet process mixture. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, and one function \code{pci} that computes several metrics of agreement between two partitions.
+\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2010}. This package facilitates profile inference, or inference at the posterior mode in a class of product partition models (PPM). The class of PPMs considered herein was motivated by, and has as a special case, a PPM formulation of the Dirichlet process mixture. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, and one function \code{pci} that computes several metrics of agreement between two partitions.
 
-The remainder of this article proceeds as follows: the relevant theory of product partition models is discussed in section \ref{PPMs}, \proglang{R} functions and the underlying \proglang{C} methods are outlined in section \ref{Code}, and examples are presented in section \ref{Examples}.
+The remainder of this article proceeds as follows: the relevant theory of product partition models is discussed in section \ref{PPMs}, \proglang{R} functions and the underlying \proglang{C} methods are outlined in section \ref{Code}, and examples are presented in sections \ref{Examples:profLinear} and \ref{Examples:profBinary}.
 
 \section[PPMs]{Product Partition Models} \label{PPMs}
 Consider the following hierarchical Bayesian model for a collection of possibly multivariate observations $\by = \{y_1, \ldots, y_n\}$:
@@ -84,7 +83,7 @@ y_i | z_i = k, \phi_k & \sim & f(y_i|\phi_k) \nonumber \\
 \phi_k & \sim & \pi_{\phi}(\phi_k) \nonumber \\
 \bz & \sim & \pi_{\bz}(\bz) \propto \prod_{k=1}^r c_k(\bz), \nonumber
 \end{eqnarray}
-where and the $\bz = \{z_1, \ldots, z_n\}$ is a collection of cluster membership variables such that $z_i = k$ indicates observations $i$ is a member of cluster $k$. The collection $\bz$ represents a partition of $\by$ into $r$ clusters, identified by the $r$ unique values among $\bz$. The values of $\bz$ are not important, as long as they are distinct. For simplicity, the positive integers are used to enumerate the distinct values. The function $f$ is a density indexed by parameter $\phi_k$ for $k = 1,\ldots,r$ independently distributed according to prior density $\pi_{\phi}$, and $\pi{\bz}$ is a prior mass function proportional to a product of {\it cohesion} functions $c_k$. The cohesion functions are used to encode prior belief about a partition. The Dirichlet process mixture has a PPM representation when $c_k(\bz) = \alpha\Gamma(n_k)$, where $\alpha$ is a scalar `precision' parameter, $\Gamma$ is the gamma function, and $n_k$ represents the number of observations identified by the $k^{th}$ cluster. Alternative cohesions yield other well-known processe mixtures \citep[see][for a partial listing]{LauGreen2007}. The \pkg{profdpm} extends the Dirichlet process mixture cohesion to include a scalar `balance' parameter $\lambda$, such that $c_k(\bz) = \alpha\Gamma(n_k)^{\lambda}$. The value of $\lambda$ affects the balance of partition cluster sizes $\{n_1, \ldots, n_r\}$. The posterior distribution over the cluster partition is proportional to the product.
+where and the $\bz = \{z_1, \ldots, z_n\}$ is a collection of cluster membership variables such that $z_i = k$ indicates observation $i$ is a member of cluster $k$. The collection $\bz$ represents a partition of $\by$ into $r$ clusters, identified by the $r$ unique values among $\bz$. The values of $\bz$ are not important, as long as they are distinct. For simplicity, the positive integers are used to enumerate the distinct values. The function $f$ is a density indexed by parameter $\phi_k$. For $k = 1,\ldots,r$ $\phi_k$ are independently distributed according to prior density $\pi_{\phi}$. The prior mass function $\pi{\bz}$ is proportional to a product of {\it cohesion} functions $c_k$. The cohesion functions are used to encode prior belief about a partition. The Dirichlet process mixture has a PPM representation when $c_k(\bz) = \alpha\Gamma(n_k)$, where $\alpha$ is a scalar `precision' parameter, $\Gamma$ is the gamma function, and $n_k$ represents the number of observations identified by the $k^{th}$ cluster. Alternative cohesions yield other well-known processe mixtures \citep[see][for a partial listing]{LauGreen2007}. The \pkg{profdpm} package extends the Dirichlet process mixture cohesion to include a scalar `balance' parameter $\lambda$, such that $c_k(\bz) = \alpha\Gamma(n_k)^{\lambda}$. The value of $\lambda$ affects the balance of partition cluster sizes $\{n_1, \ldots, n_r\}$. The posterior distribution over the cluster partition is proportional to the product.
 \begin{eqnarray}
 p(\bz|\by) \propto \prod_{k=1}^r c_k(\bz) \int L(\phi_k|\by) \pi_{\phi}(\phi_k) d\phi_k , \nonumber
 \end{eqnarray}
@@ -94,15 +93,15 @@ When the PPM is used for clustering or partitioning the collection $\by$, it is 
 
 The \pkg{profdpm} package currently utilizes three methods to approximate the MAP estimate in an iterative fashion. The first method is the agglomerative method of \citet{Ward1963}, later used by \citet{Heard2005} in the context of Dirichlet process mixtures. The agglomerative method is (usually) the fastest of the three implemented methods, but does not yield arbitrarily precise approximations to the MAP estimate.
 
-The second method is the Polya urn Gibbs sampler of \citet{MacEachern1994}, \citet{BushMacEachern1996}, and \citet{MacEachernMuller1998}. The Gibbs sampler sequentially samples from the full conditional distributions having mass functions of the form $p(z_i|\bz_{-i},\by)$, where $\bz_{-i}$ is the collection of cluster membership variables with the exception of $z_i$. The Gibbs method produces a consistent sequence of MAP estimates by selecting the sample MAP estimate following each iteration. However, the Polya urn Gibbs sampler is prone to poor mixing in the partition space.
+The second method is the Polya urn Gibbs sampler of \citet{MacEachern1994}, \citet{BushMacEachern1996}, and \citet{MacEachernMuller1998}. The Gibbs sampler sequentially samples from the full conditional distributions having mass functions of the form $p(z_i|\bz_{-i},\by)$, where $\bz_{-i}$ is the collection of cluster membership variables with the exception of $z_i$. The Gibbs method produces a consistent sequence of MAP estimates by selecting the sample MAP estimate following each iteration. However, the Polya urn Gibbs sampler is prone to poor mixing in the partition space, and is computationally intensive.
 
 The last method is an iterative stochastic search utilizing `explode' and `merge' operations on the clusters of a partition. This method is motivated by the split-merge Metropolis Hastings algorithms of \citet{GreenRichardson2001}, and \citet{JainNeal2004, JainNeal2007}. The explode-merge method utilizes a Markov chain to approximate the MAP estimate, but does not sample from the posterior distribution over the cluster partition. Hence, the explode-merge method avoids the complexity and computational expense of ensuring the chain is ergodic. Additional details of the explode merge method are pending publication elsewhere. However, a technical report is available on request.
 
-Profile inference about the parameter $\phi_k$ is conducted conditional on an estimate of the cluster partition. In product partition models, conditional on the partition estimate, $\{\phi_1, \ldots, \phi_r\}$ are independent {\it a posteriori}, and distributed according to 
+Profile inference about the parameter $\phi_k$ is conducted conditional on an estimate of the cluster partition. Conditional on the partition estimate, $\{\phi_1, \ldots, \phi_r\}$ are independent {\it a posteriori}, and distributed according to 
 \begin{displaymath}
 p(\phi_k | \by, \hat{\bz}) = \int L(\phi_k|\by) \pi_{\phi}(\phi_k) d\phi_k.
 \end{displaymath}
-Product partition models are often selected to be conjugate in $\phi_k$, giving this integral a closed form. The PPMs used in the \pkg{profdpm} package are two such models.
+The likelihood and prior over $\phi_k$ are often selected to be conjugate in $\phi_k$, giving this integral a closed form. The PPMs used in the \pkg{profdpm} package are two such models.
 
 \section[Code]{Programming Strategy} \label{Code}
 
@@ -116,7 +115,7 @@ y_i | \bx_i, z_i = k, \bmu_k, \tau_k & \sim & N(\bx^{\prime}\bmu_k, \tau_k) \non
 \bmu_k, \tau_k & \sim & N_qG(\bm_0, s_0I_q, a_0/2, 2/b_0) \nonumber \\
 \bz & \sim & \pi_{\bz}(\bz) \propto \prod_{k=1}^r \alpha \Gamma(n_k)^{\lambda},
 \end{eqnarray}
-where $y_i$ is a continuous scalar observation, $\bx_i$ is a covariate vector, $N$ represents the normal distribution with mean $\bx^{\prime}\bmu_k$ and precision $\tau_k$, and $N_qG$ represents the $q$-variate normal-gamma distribution with mean $\bm_0$, precision matrix $\tau s_0I_q$, shape $a_0/2$, and scale $2/b_0$. The prior parameters of the $\bm_0$, $s_0$, $a_0$, $b_0$, $\alpha$, and $\lambda$ may be specified as arguments to the \code{profLinear} function. Conditional on an estimated cluster partition, the pairs $\{(\bmu_1, \tau_1), \ldots, (\bmu_r, \tau_r)\}$ are independent {\it a posteriori} and distributed according to the $q$-variate normal gamma distribution with mean $\bm_k$, precision matrix $\tau\bS_k$, shape $a_k/2$, and scale $2/b_k$. In addition to the estimated partition, the posterior statistics $\bm_k$, $\bS_k$, $a_k$, and $b_k$ are returned by \code{profLinear} for each cluster.
+where $y_i$ is a continuous scalar observation, $\bx_i$ is a covariate vector, $N$ represents the normal distribution with mean $\bx^{\prime}\bmu_k$ and precision $\tau_k$, and $N_qG$ represents the $(q+1)$-variate normal-gamma distribution with mean $\bm_0$, precision matrix $\tau s_0I_q$, shape $a_0/2$, and scale $2/b_0$. The prior parameters $\bm_0$, $s_0$, $a_0$, $b_0$, $\alpha$, and $\lambda$ may be specified as arguments to the \code{profLinear} function. Conditional on an estimated partition, the pairs $\{(\bmu_1, \tau_1), \ldots, (\bmu_r, \tau_r)\}$ are independent {\it a posteriori} and distributed according to the $(q+1)$-variate normal gamma distribution with mean $\bm_k$, precision matrix $\tau\bS_k$, shape $a_k/2$, and scale $2/b_k$. In addition to the estimated partition, the posterior statistics $\bm_k$, $\bS_k$, $a_k$, and $b_k$ are returned by \code{profLinear} for each cluster.
 
 The \code{profBinary} function fits a product partition of conjugate binary models:
 \begin{eqnarray}
@@ -127,12 +126,17 @@ y_{ij} | z_i = k, \phi_{kj} & \sim & B(\phi_{kj}) \nonumber \\
 where $y_{ij}$ for $j = 1,\ldots,q$ is the $j^{th}$ binary observation for a subject $i$, $B$ represents the Bernoulli distribution with probability $\phi_{kj}$, and $b$ represents the beta distribution with shape parameters $a_0$ and $b_0$. Conditional on an estimated partition, $\phi_{kj}$ is independently beta distributed {\it a posteriori} with shape parameters $a_{kj}$ and $b_{kj}$. The \code{profBinary} function returns the estimated cluster partition as well as the posterior statistics $a_{kj}$ and $b_{kj}$.
 
 \subsection[C Code]{\proglang{C} Code}
-Each of the three methods used to compute a MAP estimate of the PPM partition (see section \ref{PPMs}) utilizes a Markov-like process. That is, a partition state is initialized, and then updated sequentially, where the updated state depends on the previous state. Each of the MAP estimation methods may be broken into two simple operations on the partition state: reassigning a single observation from one cluster to another in the partition, and computing the log posterior mass at the given partition state. Hence, the methods for MAP estimation are generically applicable to all product partition models, provided these operations are defined. The task of applying the methods generically involves writing functions that perform these simple operations for each supported PPM type ({\it e.g.} for product partitions of linear or binary models).
+The three methods used to compute a MAP estimate of the PPM partition (see section \ref{PPMs}) in the \pkg{profdpm} package are implemented in \proglang{C}. Each utilizes a Markov-like process. That is, a partition state is initialized, and then updated sequentially, where the updated state depends on the previous state. Each of the MAP estimation routines may be decomposed into two simple operations on the initialized partition state: reassigning a single observation from one cluster to another, and computing the posterior mass at the given partition state. Hence, the methods for MAP estimation are generically applicable to all product partition models, provided these operations are defined. The task of applying the methods generically involves writing functions that perform these simple operations for each supported PPM type ({\it e.g.} for product partitions of linear or binary models). In practice, since the partition state must be initialized, the `move' operation is further decomposed into operations that add and remove single observations to and from a cluster. In addition, there is a method to initially partition, or `divy' each observation to an initial cluster.
 
-Each supported PPM has an associated \proglang{C} structure containing data arrays, variables for model fitting parameters, and pointers to functions that perform the simple operations necessary for MAP estimation. These structures hold the partition state, and their references are passed to and from the MAP estimation methods. Additional PPMs may be supported by defining new structures and the associated functions to perform simple operations on the partition. Readers interested in extending the \pkg{profdpm} package to support additional PPMs are encouraged to explore the \pkg{profdpm} source code, available via the Comprehensive R Archive Network (CRAN).
+Computing posterior mass at a given partition state is greatly simplified by selecting a conjugate likelihood and prior, because the prosterior mass function over the cluster partition then has a simplified form. The posterior mass function in a PPM is a product of cluster specific terms. Hence, the simple operation of moving a single observation from one cluster to another affects at most, two of these terms. The \proglang{C} implementation of \pkg{profdpm} optimizes the posterior mass calculation by computing the posterior mass only for clusters that were affected since the previous calculation. This is implemented by decomposing the posterior mass calculation into operations that compute only the cluster-specific terms, and a single operation that computes the cluster-independent terms. 
+
+Each supported PPM has an associated \proglang{C} structure containing data arrays, variables for model fitting parameters, and pointers to functions that perform the simple operations necessary for MAP estimation. These structures hold the partition state, and their references are passed to and from the MAP estimation methods. Additional PPMs may be supported by defining new structures and the associated functions to perform necessary operations on the partition state. Readers interested in extending the \pkg{profdpm} package to support additional PPMs are encouraged to explore the \pkg{profdpm} source code, available via the Comprehensive R Archive Network (CRAN). The PPM of binary models implementation (\code{src/pdpmbm.c}) is the simplest of the two implemented models.
 
 \section[Examples]{Examples: \code{profLinear}} \label{Examples:profLinear}
-The following code example simulates a dataset consisting of three linear subgroups. The goal of this analysis is to recover the subgroup partition and perform profile inference on the slope parameter of each cluster. The following \proglang{R} snippet creates and fits the simulated dataset.
+This code example simulates a dataset consisting of three linear subgroups. The goal of this analysis is to recover the subgroup partition and perform profile inference on the slope parameter of each cluster. The following \proglang{R} snippet creates and fits the simulated dataset.
+<<echo=false>>=
+set.seed(42)
+@
 <<>>=
 #simulate data with 3 linear subgroups
 x <- as.matrix(runif(99))
@@ -142,8 +146,7 @@ y <- c(0*x[1:33], 10*x[34:66], 20*x[67:99]) + rnorm(99)
 library(profdpm)
 fit1 <- profLinear(y, x)
 @
-
-Next, the data are presented in a scatterplot. For each cluster identified by the estimated partition, the (profile) posterior mean slope is represented by a line with intercept zero. A $95\%$ credible interval for the slope is represented by two lines with slopes corresponding to the $0.025$ and $0.975$ quantiles of the (profile) posterior distribution over the slope parameter. These quantiles are computed using a parametric bootstrap.
+Next, the data are presented in a scatterplot. For each cluster identified in the estimated partition, the (profile) posterior mean slope is represented by a line with intercept zero. A $95\%$ credible interval for the slope is represented by two lines with slopes corresponding to the $0.025$ and $0.975$ quantiles of the (profile) posterior distribution over the slope parameter. These quantiles are computed using a parametric bootstrap.
 \begin{center}
 <<fig=TRUE>>=
 plot(x, y)
@@ -212,19 +215,21 @@ pci(simulatedPart2, estimatedPart2)
 
 The first value in the vector returned by \code{pci} corresponds to the \citet{Rand1971} index for the two partitions. This statistic enumerates the proportion of observations pairs that are clustered concordantly in the two partitions. A Rand index value of one indicates perfect agreement. Inference about these statistics is difficult, partly because a null hypothesis about the partition is rarely well defined. However, the \code{pci} function may be used to contruct bootstrap tests using the Rand index (or another index) as a test statistic.
 
-In both of the previous examples, every observation is clustered individually. However, if some observations are known to be clustered beforehand, this information should be used. This occurs, for example, in timecourse experiments, where each `subject' is observed repeatedly over time or another covariate. An investigator may wish to cluster \emph{subjects} with similar linear trends over time. Hence, all observations corresponding to a single subject should always be grouped together. Grouping observations {\it apriori} may decrease the variance of the profile posterior distribution, and/or greatly reduce the complexity of MAP estimation. A grouping factor may be passed to \code{profLinear} using the \code{group} argument. 
+In both of the previous examples, every observation is clustered individually. However, if some observations are known to be clustered beforehand, this information should be used. This occurs, for example, in timecourse experiments, where each `subject' is observed repeatedly over time or another covariate. An investigator may wish to cluster \emph{subjects} with similar linear trends over time. Hence, all observations corresponding to a single subject should always be grouped together. Grouping observations {\it a priori} may decrease the variance of the profile posterior distribution, and/or greatly reduce the complexity of MAP estimation. A grouping factor may be passed to \code{profLinear} using the \code{group} argument. 
 
 \section[Examples]{Examples: \code{profBinary}} \label{Examples:profBinary}
 The following \proglang{R} code chunk simulates a multiple binary outcome dataset. The cells of each row in the dataset correspond to multiple binary observations on a single `subject'.
 <<>>=
 #simulate three subgroups probabilities
-p1 <- c(0.99, 0.50, 0.01)
-p2 <- rep(0.50,3)
-p3 <- rev(p1)
+p1 <- c(0.05, 0.05, 0.05)
+p2 <- c(0.95, 0.05, 0.05)
+p3 <- c(0.95, 0.95, 0.05)
+p4 <- c(0.95, 0.95, 0.95)
 y1 <- matrix(rbinom(99, 1, p1), 33, 3, TRUE)
 y2 <- matrix(rbinom(99, 1, p2), 33, 3, TRUE)
 y3 <- matrix(rbinom(99, 1, p3), 33, 3, TRUE)
-y  <- rbind(y1, y2, y3)
+y4 <- matrix(rbinom(99, 1, p4), 33, 3, TRUE)
+y  <- rbind(y1, y2, y3, y4)
 
 #fit the binary model
 fitb <- profBinary(y)
@@ -232,7 +237,7 @@ fitb <- profBinary(y)
 
 The \code{pci} function may again be used to quantify the agreement between the simulated and estimated partitions.
 <<>>=
-simulatedPartB <- rep(1:3, rep(33,3))
+simulatedPartB <- rep(1:4, rep(33,4))
 estimatedPartB <- fitb$clust
 pci(simulatedPartB, estimatedPartB)
 @
@@ -241,9 +246,10 @@ As mentioned above, the outcome probabilities for each cluster are beta distribu
 <<>>=
 attach(fitb, warn.conflicts=FALSE)
 for(i in 1:length(a)) {
+    sizes <- format(table(clust), digits=2)
     probs <- format(a[[i]]/(a[[i]]+b[[i]]), digits=2, nsmall=3L)
     probs <- paste(probs, collapse=" ")
-    cat(paste("cluster", i, probs, "\n"))
+    cat(paste("cluster:", i, "size:", sizes[i], "mean:", probs, "\n"))
 }
 detach(fitb)
 @
