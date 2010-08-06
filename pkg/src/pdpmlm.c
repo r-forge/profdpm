@@ -124,7 +124,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
   index = 0;
   for( i = 0; i < mdl->q; i++ ) {
     m[ i ] = mdl->s0 * mdl->m0[ i ] + mdl->xycl[ cls ][ i ];
-    for( j = i; j < mdl->q; j++ ) {
+    for( j = 0; j <= i; j++ ) {
       s[ index ] = mdl->xxcl[ cls ][ index ];
       if( j == i ) { s[ index ] += mdl->s0; }
       index++;
@@ -179,7 +179,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
   //reload s
   index = 0;
   for( i = 0; i < mdl->q; i++ ) {
-    for( j = i; j < mdl->q; j++ ) {
+    for( j = 0; j <= i; j++ ) {
       s[ index ] = mdl->xxcl[ cls ][ index ];
       if( j == i ) { s[ index ] += mdl->s0; }
       index++;

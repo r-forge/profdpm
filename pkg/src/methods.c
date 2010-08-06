@@ -198,6 +198,7 @@ void method_gibbs( pdpm_t * obj, int maxiter, double crit) {
   proposal_cls  = (unsigned int*) pdpm_alloc( obj, obj->ngr, sizeof( unsigned int ) );
 
   while( iter++ < maxiter && stopcrit > crit ) {
+    R_CheckUserInterrupt();
     for( grp = 0; grp < obj->ngr; grp++ ) {
       cls_old = obj->vcl[ grp ];
       //compute change in logp for possible moves
@@ -253,6 +254,7 @@ void method_stoch( pdpm_t * obj, int maxiter, double crit) {
   //compute initial logp
   obj->logpval = obj->logp( obj );
   while( iter++ < maxiter ) {
+    R_CheckUserInterrupt();
 
     //select the number of groups to shuffle
     ngrps = (unsigned int) floor( obj->ngr * pdpm_runif( 0.0, 1.0 ) );
@@ -325,6 +327,7 @@ void method_agglo( pdpm_t * obj, int maxiter ) {
   //repeat until all clusters are merged into one
   //while( obj->ncl > 1 && maxiter-- != 0 ) {
   while( obj->ncl > 1 ) {
+    R_CheckUserInterrupt();
     //compute best merge
     del_best = -DBL_MAX;
     icls = 0;
