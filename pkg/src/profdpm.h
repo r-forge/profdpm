@@ -136,6 +136,7 @@ void        *model;
 #define METHOD_STOCH  1
 #define METHOD_AGGLO  2
 #define METHOD_GIBBS  3
+#define METHOD_FAST   4
 
 //Allocate memory and count usage in obj->mem
 void *       pdpm_alloc( pdpm_t * obj, unsigned int count, unsigned int size );

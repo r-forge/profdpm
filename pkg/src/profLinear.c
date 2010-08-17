@@ -187,6 +187,11 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { obj->add( obj, i, i ); } }
     method_agglo( obj, INTEGER(maxiter)[0] );
   }
+  else if( INTEGER(method)[0] == METHOD_FAST ) {
+    if(!isLogical(clust))
+      warning("\'clust\' argument ignored for \'fast\' method");
+    method_fast( obj );
+  }
   //***********************************************************
 
   if( !(obj->flags & FLAG_OPTCRIT) ) { warning("optimization criterion not met"); }

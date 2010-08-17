@@ -100,9 +100,10 @@ profLinear <- function(y, x, group, clust, param, method="stochastic",
   else if( method == "stochastic" )    { method <- 1 }
   else if( method == "agglomerative" ) { method <- 2 }
   else if( method == "gibbs" )         { method <- 3 }
+  else if( method == "fast" )          { method <- 4 }
   else {
     method <- 1 #default is "stochastic"
-    warning("method must be \'stochastic\', \'agglomerative\', or \'none\'", )
+    warning("method must be \'stochastic\', \'agglomerative\', \'gibbs\', \'fast\', or \'none\'", )
   }
 
   ###################################################
