@@ -33,7 +33,7 @@ Rand, W. (1971) Objective Criteria for the Evaluation of Clustering Methods. Jou
 
 Fowlkes, E. B. and Mallows, C. L. (1983) A Method for Comparing Two Hierarchical Clusterings. Journal of the American Statistical Association 78:553-569
 
-Wallace, D. L. (1983) A Method for Comparing Two Hierarchical Clusterings. Journal of the American Statistical Association 78:569-576
+Wallace, D. L. (1983) A Method for Comparing Two Hierarchical Clusterings: comment. Journal of the American Statistical Association 78:569-576
 }
 
 \author{Matt Shotwell}

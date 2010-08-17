@@ -236,6 +236,7 @@ void method_gibbs( pdpm_t * obj, int maxiter, double crit) {
     //update stopping criterion
     if(stopcrit != DBL_MAX) { stopcrit *= 0.95; }
   }
+  if(stopcrit <= crit) { obj->flags |= FLAG_OPTCRIT; }
   //restore
   obj->logpval = logp_best;
   for( grp = 0; grp < obj->ngr; grp++ ) { 
@@ -378,6 +379,52 @@ void method_agglo( pdpm_t * obj, int maxiter ) {
     pdpm_printf("\rpercent complete: 100%\n");
     pdpm_printf("ncl: %u logp: %f\n", obj->ncl, obj->logpval);
   }
+}
+
+/* Fast method of Wang & Dunson (2010) */
+
+void method_fast(pdpm_t * obj) {
+  //strategy: 
+  // 1. Select an ordering, uniformly at random (may skip this)
+  // 2. Assign first observation to first cluster
+  // 3. Assign subsequent observations to new or existing clusters
+  //    such that conditional posterior is largest.
+  unsigned int i, grp, cls, cls_best;
+  double del;
+  obj->add( obj, 0, 0 );
+  for( grp = 1; grp < obj->ngr; grp++ ) {
+    obj->add( obj, grp, 0 );
+    cls_best = 0;
+    for( cls = 0; cls < obj->ncl; cls++ ) {
+      del = method_movep( obj, grp, cls );
+      if(del > 0) cls_best = cls;
+    }
+    method_move( obj, grp, cls_best );
+  }
+}
+
+void pdpmlm_divy( pdpm_t * obj ) {
+  pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
+  unsigned int i, grp = 0, cls = 0, set = 0;
+  double a, b;
+  obj->add( obj, grp, cls );
+  for( grp = 1; grp < obj->ngr; grp++ ) {
+    for( cls = 0; cls < obj->ncl; cls++ ) {
+      pdpmlm_parm( obj, cls, mdl->s, mdl->m, &a, &b, &mdl->d );
+      obj->add( obj, grp, cls );
+      pdpmlm_parm( obj, cls, mdl->s, mdl->m, &mdl->a, &mdl->b, &mdl->d );
+      //Generally precision (a/b) is decreased with addition 
+      //of a group to a cluster. We accept the addition when
+      //the the precision changes by more than 0.95 fold
+      if( ( (mdl->a / mdl->b) / (a / b) ) > 0.95 ) { break; }
+      else { obj->sub( obj, grp, cls ); }
+    }
+    if( cls == obj->ncl ) { obj->add( obj, grp, cls ); } 
+  }
+  obj->logpval = obj->logp( obj );
+  if( obj->flags & FLAG_VERBOSE ) {
+    pdpm_printf("initialized: logp: %f\n", obj->logp );
+  } 
 }
 
 /* method_spmer (simple and restricted split-merge)
