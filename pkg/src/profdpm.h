@@ -168,6 +168,8 @@ void         method_gibbs( pdpm_t * obj, int maxiter, double crit );
 void         method_stoch( pdpm_t * obj, int maxiter, double crit );
 //agglomerative optimization
 void         method_agglo( pdpm_t * obj, int maxiter );
+//Fast method, adapted from Wang and Dunson, 2010
+void         method_fast( pdpm_t * obj );
 
 typedef struct {
 
