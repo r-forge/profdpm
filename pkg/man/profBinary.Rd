@@ -8,7 +8,7 @@ This function finds the most probable cluster partition in a binary product part
 
 \usage{
 profBinary(y, clust, param, method="stochastic",
-           maxiter=1000, crit=1e-5, verbose=FALSE)
+           maxiter=1000, crit=1e-6, verbose=FALSE)
 }
 
 \arguments{
