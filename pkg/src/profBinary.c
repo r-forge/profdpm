@@ -88,9 +88,9 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     mdl->gqcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr * mdl->q, sizeof(unsigned int) );
 
     //9. distribute clusters initially and perform optimization
-    if( isInteger(clust) ) {
+    if( isInteger(clust) )
         for( j = 0; j < obj->ngr; j++ )
-            obj->add( obj, j, INTEGER(clust)[j] ); 
+            obj->move( obj, j, INTEGER(clust)[j] ); 
   
     //dispatch optimization routine
     if( INTEGER(method)[0] == METHOD_NONE ) {
@@ -108,7 +108,7 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
         PutRNGstate();
     }
     else if( INTEGER(method)[0] == METHOD_AGGLO ) {
-        if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { obj->add( obj, i, i ); } }
+        if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { obj->move( obj, i, i ); } }
         method_agglo( obj, INTEGER(maxiter)[0] );
     }
   
@@ -136,7 +136,7 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
 
     cls = 0;
     for( i = 0; i < obj->ncl; i++ ) {
-        while( obj->gcl[ cls ] == 0 ) { cls++; }
+        while( obj->gcl[ cls ] == 0 ) cls++;
         elt = obj->pbuf[ cls ] - 1; /* remap cls */
         SET_VECTOR_ELT(VECTOR_ELT(retval, 3), elt, allocVector(REALSXP, mdl->q));
         SET_VECTOR_ELT(VECTOR_ELT(retval, 4), elt, allocVector(REALSXP, mdl->q));

@@ -158,7 +158,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     if( isInteger(clust) ) {
         i = 0;
         for( j = 0; j < obj->ngr; j++ ) {
-            obj->add( obj, j, INTEGER(clust)[i] );
+            obj->move( obj, j, INTEGER(clust)[i] );
             i += mdl->pgr[ j ];
         }
     } 
@@ -180,7 +180,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     } else if( INTEGER(method)[0] == METHOD_AGGLO ) {
         if( isLogical(clust) )
             for( i = 0; i < obj->ngr; i++ )
-                obj->add( obj, i, i );
+                obj->move( obj, i, i );
         method_agglo( obj, INTEGER(maxiter)[0] );
     }
     else if( INTEGER(method)[0] == METHOD_FAST ) {
@@ -193,7 +193,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     if( !(obj->flags & FLAG_OPTCRIT) )
         warning("optimization criterion not met");
     if( obj->flags & FLAG_SINGULA )
-        warning("singularities detected during optimization"); }
+        warning("singularities detected during optimization");
     if( obj->flags & FLAG_VERBOSE )
         pdpm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
 

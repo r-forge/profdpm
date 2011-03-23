@@ -258,7 +258,7 @@ void         pdpmlm_add( pdpm_t * obj, unsigned int grp, unsigned int cls );
 void         pdpmlm_sub( pdpm_t * obj, unsigned int grp, unsigned int cls );
 
 //Move an observation/group to cluster cls
-void         pdpmlm_move( pdpm_t * obj, unsigned int grp, unsigned int cls )
+void         pdpmlm_move( pdpm_t * obj, unsigned int grp, unsigned int cls );
 
 //Compute the posterior parameters s, m, a, and b for a given cluster
 void         pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double * a, double * b, double * d );

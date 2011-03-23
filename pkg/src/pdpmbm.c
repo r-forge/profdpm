@@ -3,7 +3,7 @@
 void pdpmbm_divy( pdpm_t * obj ) {
     unsigned int i, grp = 0;
     for( grp = 0; grp < obj->ngr; grp++ )
-        obj->add( obj, grp, grp );
+        pdpmbm_add( obj, grp, grp );
     obj->logpval = obj->logp( obj );
     if( obj->flags & FLAG_VERBOSE )
         pdpm_printf("initialized: logp: %f\n", obj->logpval );

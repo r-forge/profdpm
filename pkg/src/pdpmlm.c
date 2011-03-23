@@ -4,19 +4,19 @@ void pdpmlm_divy( pdpm_t * obj ) {
     pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
     unsigned int i, grp = 0, cls = 0, set = 0;
     double a, b;
-    obj->add( obj, grp, cls );
+    pdpmlm_add( obj, grp, cls );
     for( grp = 1; grp < obj->ngr; grp++ ) {
         for( cls = 0; cls < obj->ncl; cls++ ) {
             pdpmlm_parm( obj, cls, mdl->s, mdl->m, &a, &b, &mdl->d );
-            obj->add( obj, grp, cls );
+            pdpmlm_add( obj, grp, cls );
             pdpmlm_parm( obj, cls, mdl->s, mdl->m, &mdl->a, &mdl->b, &mdl->d );
             //Generally precision (a/b) is decreased with addition 
             //of a group to a cluster. We accept the addition when
             //the the precision changes by more than 0.95 fold
             if( ( (mdl->a / mdl->b) / (a / b) ) > 0.95 ) { break; }
-            else { obj->sub( obj, grp, cls ); }
+            else { pdpmlm_sub( obj, grp, cls ); }
         }
-        if( cls == obj->ncl ) { obj->add( obj, grp, cls ); } 
+        if( cls == obj->ncl ) { pdpmlm_add( obj, grp, cls ); } 
     }
     obj->logpval = obj->logp( obj );
     if( obj->flags & FLAG_VERBOSE )
