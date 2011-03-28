@@ -5,7 +5,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\VignetteIndexEntry{profdpm}
 %% almost as usual
-\author{Matthew S. Shotwell\\Medical University of South Carolina}
+\author{Matthew S. Shotwell\\Vanderbilt University}
 \title{\pkg{profdpm}: An \proglang{R} Package for MAP Estimation in a Class of Product Partition Models}
 
 %% for pretty printing and a nice hypersummary also set:
@@ -34,11 +34,11 @@ The \pkg{profdpm} package facilitates profile inference, or inference at the pos
 %% in the following format:
 \Address{
   Matthew S. Shotwell\\
-  Division of Biostatistics and Epidemiology\\
-  Medical University of South Carolina\\
-  135 Canon St. Charleston, SC, USA\\
-  E-mail: \email{shotwelm@musc.edu}\\
-  URL: \url{http://biostatmatt.com}
+  Department of Biostatistics\\
+  Vanderbilt University\\
+  1161 $21^{\mathrm{st}}$ Ave. South, Nashville, TN\\
+  E-mail: \email{matt.shotwell@Vanderbilt.edu}\\
+  URL: \url{http://biostat.mc.vanderbilt.edu/wiki/Main/MattShotwell}
 }
 %% It is also possible to add a telephone and fax number
 %% before the e-mail in the following format:
@@ -153,10 +153,9 @@ set.seed(42)
 #simulate data with 3 linear subgroups
 x <- as.matrix(runif(99))
 y <- c(0*x[1:33], 10*x[34:66], 20*x[67:99]) + rnorm(99)
-
 #estimate linear partition
 library("profdpm")
-fit1 <- profLinear(y, x)
+fit1 <- profLinear(y ~ 0 + x)
 @
 Figure~\ref{fig:sim1} presents the simulated data in a scatterplot. For each cluster identified in the estimated partition, the profile posterior mean slope is represented by a dashed line with intercept zero. A $95\%$ credible interval for the slope is represented by two solid lines with slopes corresponding to the $0.025$ and $0.975$ quantiles of the profile posterior distribution over the slope parameter. These quantiles are computed using a parametric bootstrap.
 <<label=figSim1, include=FALSE>>=
@@ -194,7 +193,7 @@ X <- cbind(sinc(2*x), sinc(5*x))
 
 #estimate partition
 library("profdpm")
-fit2 <- profLinear(y, X)
+fit2 <- profLinear(y ~ 0 + sinc(2*x) + sinc(5*x))
 @
 
 The following code block generates the scatterplot presented in Figure~\ref{fig:sim2}. The plot is overlaid with the profile posterior mean functions for each cluster. A pointwise $95\%$ credible interval for each mean function is computed using a parametric bootstrap.

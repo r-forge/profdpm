@@ -7,13 +7,13 @@ This function finds the most probable cluster partition in a linear product part
 }
 
 \usage{
-profLinear(y, x, group, clust, param, method="stochastic",
+profLinear(formula, data, group, clust, param, method="stochastic",
            maxiter=1000, crit=1e-6, verbose=FALSE)
 }
 
 \arguments{
-\item{y}{numeric vector of observations.}
-\item{x}{numeric matrix of covariates.}
+\item{formula}{a formula.}
+\item{data}{a dataframe where \code{formula} is evaluated}
 \item{group}{optional vector of factors (or coercible to factors) indicating grouping among observations. Observations that are grouped will be clustered together. This is useful if several values form a single longitudinal observation.}
 \item{clust}{optional vector of factors (or coercible to factors) indicating initial clustering among observations. Grouped observations (see \code{group}) must have the same \code{clust} value.}
 \item{param}{optional list containing the any of the named elements \code{alpha}, \code{a0}, \code{b0}, \code{m0}, and \code{s0} corresponding to the prior parameters of the normal-gamma Dirichlet process mixture. The prior parameters of the normal-gamma Dirichlet process mixture should all be scalars except \code{m0} which should be a vector of length equal to the number of columns in \code{x}.}
