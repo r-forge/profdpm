@@ -1,18 +1,18 @@
-test <- function() {
+profBinaryExtension <- function() {
     require('inline')
     require('profdpm')
     dll  <- getDynLib("profdpm")
-    #regx <- paste(dll[['name']], .Platform$dynlib.ext, '$', sep='')             
-    #cat('regex:', regx, '\n')
-    #path <- sub(regx, '', dll[['path']])
-    #cat('path:', path, '\n')
-    #lib  <- paste('-L', path, ' -l', dll[['name']], sep='')
-    lib <- paste('-l:', dll[['path']], sep='')
-    cat('link:', lib, '\n')
-    sig  <- signature()
-    cat('sig:', sig, '\n')
-    bod  <- 'printf("Hello World!\\n");\nreturn R_NilValue;'
-    test <- cfunction(sig, bod, libargs=lib, language='C', verbose=TRUE)
-    return(test)
-}
-    
+    inc  <- 
+    lib  <- paste('-l:', dll[['path']], sep='')
+    sig  <- signature(x='numeric')
+    bod  <- "
+        if(!isNumeric(x) || length(x) < 1)
+            error(\"invalid %s argument\", \"'x'\");
+        printf(\"first value: %f\\n\", REAL(x)[0]);
+        return R_NilValue;
+    "
+    profBinary  <- cfunction(sig, bod, libargs=lib, verbose=TRUE)
+    function(x) invisible(profBinary(x))
+}    
+
+f <- profBinaryExtension()
