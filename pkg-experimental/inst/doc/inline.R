@@ -1,4 +1,4 @@
-profBinaryExtension <- function() {
+profNorm2DExtension <- function() {
     require('inline')
     require('profdpm')
     dll  <- getDynLib("profdpm")
@@ -11,8 +11,8 @@ profBinaryExtension <- function() {
         printf(\"first value: %f\\n\", REAL(x)[0]);
         return R_NilValue;
     "
-    profBinary  <- cfunction(sig, bod, libargs=lib, verbose=TRUE)
-    function(x) invisible(profBinary(x))
+    profNorm2D  <- cfunction(sig, bod, libargs=lib, verbose=TRUE)
+    function(x) invisible(profNorm2D(x))
 }    
 
-f <- profBinaryExtension()
+f <- profNorm2DExtension()
