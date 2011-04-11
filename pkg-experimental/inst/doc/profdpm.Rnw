@@ -1,10 +1,11 @@
 \documentclass[article]{jss}
-
+\usepackage{algorithmic}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% declarations for jss.cls %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\VignetteIndexEntry{profdpm}
 %% almost as usual
+
 \author{Matthew S. Shotwell\\Vanderbilt University}
 \title{\pkg{profdpm}: An \proglang{R} Package for MAP Estimation in a Class of Product Partition Models}
 
@@ -15,7 +16,7 @@
 
 %% an abstract and keywords
 \Abstract{
-The \pkg{profdpm} package facilitates profile inference, or inference at the posterior mode for a class of product partition models (PPM). The Dirichlet process mixture is represented as a specific case in this class, and is the default. The PPM is implemented for linear models and multivariate binary models. Several methods are implemented to search for the maximum posterior estimate of the data partition. This article discusses the relevant theory, the \proglang{R} and \proglang{C} implementation, and examples of high level functionality.
+The \pkg{profdpm} package facilitates inference at the posterior mode for a class of product partition models (PPM). The Dirichlet process mixture is represented as a specific case in this class, and is the default. The PPM is implemented for linear models and multivariate binary models. Several methods are implemented to search for the maximum posterior estimate of the data partition. This article discusses the relevant theory, the \proglang{R} and underlying \proglang{C} implementations, and examples of high level functionality.
 }
 \Keywords{product partition model, MAP estimate, clustering, \proglang{R}, \proglang{C}}
 \Plainkeywords{product partition model, MAP estimate, clustering, R, C} %% without formatting
@@ -72,7 +73,7 @@ The \pkg{profdpm} package facilitates profile inference, or inference at the pos
 \begin{document}
 
 \section[Intro]{Introduction}
-\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2010}. This package facilitates profile inference, or inference at the posterior mode in a class of product partition models (PPM). The class of PPMs considered was motivated by a PPM formulation of the Dirichlet process mixture, which is a special case. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, and a function \code{pci} that computes several metrics of agreement between two partitions.
+\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2010}. This package facilitates inference at the posterior mode in a class of product partition models (PPM) by approximating the maximum {\it a posteriori} data partition. The class of PPMs considered was motivated by a PPM formulation of the Dirichlet process mixture, which is a special case. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, and a function \code{pci} that computes several metrics of agreement between two partitions. However, \pkg{profdpm} was designed with extensibility in mind.
 
 The remainder of this article proceeds as follows: the relevant theory of product partition models is discussed in section \ref{PPMs}, \proglang{R} functions and the underlying \proglang{C} methods are outlined in section \ref{Code}, and examples are presented in sections \ref{Examples:profLinear} and \ref{Examples:profBinary}. Section \ref{Extensions} gives a short discussion of potential extensions to the \pkg{profdpm} package.\\
 
@@ -83,35 +84,77 @@ y_i | z_i = k, \phi_k & \sim & f(y_i|\phi_k) \nonumber \\
 \phi_k & \sim & \pi_{\phi}(\phi_k) \nonumber \\
 \bz & \sim & \pi_{\bz}(\bz) \propto \prod_{k=1}^r c_k(\bz), \nonumber
 \end{eqnarray}
-where $\bz = \{z_1, \ldots, z_n\}$ is a collection of cluster membership variables such that $z_i = k$ indicates observation $i$ is a member of cluster $k$. The collection $\bz$ represents a partition of $\by$ into $r$ clusters, identified by the $r$ unique values among $\bz$. The values of $\bz$ are not important, as long as they are distinct. For simplicity, the positive integers are used to enumerate the distinct values. The function $f$ is a probability density indexed by parameter $\phi_k$. For $k = 1,\ldots,r$, $\phi_k$ are independently distributed according to prior density $\pi_{\phi}$. The prior mass function $\pi_{\bz}$ is proportional to a product of {\it cohesion} functions $c_k$. The cohesion functions are used to specify the prior distribution and prior belief about the data partition. The Dirichlet process mixture has a PPM representation when $c_k(\bz) = \alpha\Gamma(n_k)$, where $\alpha$ is a scalar `precision' parameter, $\Gamma$ is the gamma function, and $n_k$ represents the number of observations assigned to the $k^{th}$ cluster. Alternative cohesions yield other well-known process mixtures \citep[for a partial listing, see][]{LauGreen2007}. The \pkg{profdpm} package extends the Dirichlet process mixture cohesion to include a scalar `balance' parameter $\lambda$, such that $c_k(\bz) = \alpha\Gamma(n_k)^{\lambda}$. The value of $\lambda$ affects the balance of partition cluster sizes $\{n_1, \ldots, n_r\}$. The posterior distribution over the data partition is proportional to the product
+where $\bz = \{z_1, \ldots, z_n\}$ is a collection of cluster membership variables such that $z_i = k$ indicates observation $i$ is a member of cluster $k$. The collection $\bz$ represents a partition of $\by$ into $r$ clusters, identified by the $r$ unique values among $\bz$. The values of $\bz$ are not important, as long as they are distinct. For simplicity, the positive integers are used to enumerate the distinct values. The function $f$ is a probability density indexed by parameter $\phi_k$. For $k = 1,\ldots,r$, $\phi_k$ are independently distributed according to prior density $\pi_{\phi}$. The prior mass function $\pi_{\bz}$ is proportional to a product of {\it cohesion} functions $c_k$, which specify the prior distribution of the data partition. The Dirichlet process mixture has a PPM representation when $c_k(\bz) = \alpha\Gamma(n_k)$, where $\alpha$ is a scalar `precision' parameter, $\Gamma$ is the gamma function, and $n_k$ represents the number of observations assigned to the $k^{th}$ cluster. Alternative cohesions yield other well-known process mixtures \citep[for a partial listing, see][]{LauGreen2007}. The \pkg{profdpm} package extends the Dirichlet process mixture cohesion to include a scalar `balance' parameter $\lambda$, such that $c_k(\bz) = \alpha\Gamma(n_k)^{\lambda}$. The value of $\lambda$ affects the balance of partition cluster sizes $\{n_1, \ldots, n_r\}$. The posterior distribution over the data partition is proportional to the product
 \begin{eqnarray}
-p(\bz|\by) \propto \prod_{k=1}^r c_k(\bz) \int L(\phi_k|\by) \pi_{\phi}(\phi_k) d\phi_k , \label{eqn:posterior}
+p(\bz|\by) \propto \prod_{k=1}^r c_k(\bz) \int L(\phi_k|\by,\bz) \pi_{\phi}(\phi_k) d\phi_k , \label{eqn:posterior}
 \end{eqnarray}
 where $L(\phi_k|\by) = \prod_{i=1}^n f(y_i|\phi_k)^{I(z_i=k)}$ is the cluster-specific likelihood. Hence, the product partition model is conjugate in the sense that both prior and posterior may be written as a product of cluster-specific terms. The product partition model is attributed to \citet{Hartigan1990} and \citet{BarryHartigan1992}.
 
-A maximum {\it a posteriori} (MAP) estimate of the data partition variable $\bz$ is often computed when the PPM is used for clustering. However, the principal difficulty with partition models is the size of the partition space \citep[see the `Bell number',][]{Bell1934, Rota1964}. Hence, computing the MAP estimate using enumerative methods is not practical.
+A maximum {\it a posteriori} (MAP) estimate of the data partition variable $\bz$ may be computed when the PPM is used for clustering. However, the principal difficulty with partition models is the size of the partition space \citep[see the `Bell number',][]{Bell1934, Rota1964}. Hence, computing the MAP estimate using enumerative methods is not practical.
 
-The \pkg{profdpm} package utilizes three methods to approximate the MAP estimate in an iterative fashion. The first method is the agglomerative method of \citet{Ward1963}, later used by \citet{Heard2005} in the context of Dirichlet process mixtures. The agglomerative method is usually the fastest of the three implemented methods, but does not yield arbitrarily precise approximations to the MAP estimate.
+The \pkg{profdpm} package utilizes four methods to approximate the MAP estimate in an iterative fashion. The first method is the agglomerative method of \citet{Ward1963}, later used by \citet{Heard2005} in the context of Dirichlet process mixtures. This method produces a deterministic and finite sequence of data partition estimates. The estimate with largest marginal posterior mass is selected to approximate the MAP estimate. Initially, all observations are partitioned into separate clusters. Two clusters are merged at each subsequent step such that the change in marginal posterior mass is largest. This process repeats until all observations are partitioned into a single cluster.
 
-The second method is the Polya urn Gibbs sampler of \citet{MacEachern1994}, \citet{BushMacEachern1996}, and \citet{MacEachernMuller1998}. The Gibbs sampler sequentially samples from the full conditional distributions having mass functions of the form $p(z_i|\bz_{-i},\by)$, where $\bz_{-i}$ is the collection of cluster membership variables with the exception of $z_i$. The Gibbs method produces a consistent sequence of MAP estimates by selecting the sample MAP estimate following each iteration. However, the Polya urn Gibbs sampler is prone to poor mixing in the partition space, and is computationally intensive.
+The agglomerative method evaluates the marginal posterior mass function $O(n^2)$ times. Still, this method is usually the second fastest among the implemented methods. It does not yield arbitrarily precise approximations to the MAP estimate.
+
+The second method is the Polya urn Gibbs sampler of \citet{MacEachern1994}, \citet{BushMacEachern1996}, and \citet{MacEachernMuller1998}. The Gibbs sampler sequentially samples from the full conditional distributions having mass functions of the form $p(z_i|\bz_{-i},\by)$, where $\bz_{-i}$ is the collection of cluster membership variables with the exception of $z_i$. The Gibbs method produces a consistent sequence of MAP estimates by selecting the sample MAP estimate following each iteration. However, the Polya urn Gibbs sampler is prone slow mixing in the partition space, and is computationally intensive.
 
 The last method is an iterative stochastic search utilizing `explode' and `merge' operations on the clusters of a partition. At the explode step, a randomly selected subset of observations are redistributed uniformly at random to an existing or new cluster. Each of the exploded observations are then merged with one of the existing clusters in a sequentially optimal fashion. The explode-merge method is motivated by the split-merge Metropolis Hastings algorithms of \citet{GreenRichardson2001}, and \citet{JainNeal2004, JainNeal2007}. This method utilizes a Markov chain to approximate the MAP estimate, but does not sample from the posterior distribution over the data partition. Hence, the explode-merge method avoids the complexity and computational expense of ensuring the chain is ergodic. 
 
+The following pseudocode described the method at iteration $t$:
+{
+\singlespacing
+\begin{algorithmic}[1]
+    \STATE set $\bz^{\prime} = \bz^{(t)}$
+    \STATE draw $n_J$ from $\{1,\ldots,n\}$
+    \STATE draw vector $J$ of length $n_J$ from $\{1,\ldots,n\}$ w/o replacement
+    \FOR{$j$ in $J$}
+        \STATE draw $z_j^{\prime}$ from $\{1,\ldots,n\}$ (explode step)
+    \ENDFOR
+    \IF{$p(\bz^{\prime}|\by) > p(\bz^{(t)}|\by)$}
+        \RETURN $\bz^{\prime}$
+    \ENDIF
+    \FOR{$j$ in $J$}
+        \STATE set $z_j^{\prime}$ to maximize $p(z_j^{\prime}|\bz_{-j}^{\prime},\by)$ (merge step)
+    \ENDFOR
+    \IF{$p(\bz^{\prime}|\by) > p(\bz^{(t)}|\by)$}
+        \RETURN $\bz^{\prime}$
+    \ELSE
+        \RETURN $\bz^{(t)}$
+    \ENDIF
+\end{algorithmic}
+}  
+The explode-merge optimization terminates when little improvement is observed in $p(\bz^{\prime}|\by)$. Because the partition state is discrete, improvements in the marginal posterior mass may be irregular. The \pkg{profdpm} package implements a moving-average in calculating improvement. Hence, no improvement from one iteration to the next does not necessarily terminate the optimization. 
+
 Profile inference about the parameter $\phi_k$ is conditional on an estimate of the data partition. Conditional on the estimate, $\{\phi_1, \ldots, \phi_r\}$ are independent {\it a posteriori}, and distributed according to 
 \begin{displaymath}
-p(\phi_k | \by, \hat{\bz}) = \int L(\phi_k|\by) \pi_{\phi}(\phi_k) d\phi_k.
+p(\phi_k | \by, \hat{\bz}) \propto L(\phi_k|\by, \hat{\bz}) \pi_{\phi}(\phi_k).
 \end{displaymath}
-The likelihood and prior over $\phi_k$ are often selected to be conjugate in $\phi_k$, giving this integral a convenient form. The PPMs used in the \pkg{profdpm} package are two such models.
+The likelihood and prior over $\phi_k$ are often selected to be conjugate in $\phi_k$. The PPMs used in the \pkg{profdpm} package are two such models.
 
 \section[Code]{Programming strategy} \label{Code}
 
-The \pkg{profdpm} package computes a MAP estimate for two types of PPMs, corresponding to the \code{profLinear} and \code{profBinary} functions. Both functions accept data and model fitting arguments, and return an estimate of the data partition and other information necessary for profile inference. 
+The \pkg{profdpm} package computes a MAP estimate for two types of PPMs, corresponding to the \proglang{R} functions \code{profLinear} and \code{profBinary}. Both functions accept data and model fitting arguments, and return an instance of the class \code{profLinear} or \code{profBinary} respectively; the data partition estimate and other information related to profile inference. 
+
+\subsection[C code]{\proglang{C} code}
+
+The \pkg{profdpm} package implements the product partition model as a state machine. The model state may be simple or complex, depending on the resources of the target platform and the available programming effort. A simple model state might store only the original data arrays, an array of cluster membership variables, and various scalars to hold array dimensions and other required parameters. 
+For example, linear models with covariate vector $\bx_i$ often involve the outer product $\bx_i\bx_i^{\prime}$. A computationally efficient method would compute and store this quantity once, rather than recompute the quantity on demand. Furthermore, since $\bx_i\bx_i^{\prime}$ is symmetric, only the upper or lower triangular portion requires storage. The PPM of linear models implemented in the \pkg{profdpm} package utilizes both optimizations. 
+
+The \pkg{profdpm} package leaves the programmer to balance the antagonistic relationship between memory usage and compuataional efficiency by offering a uniform API to partition estimation methods.
+
+The \pkg{profdpm} package implements three methods for partition estimation (see section \ref{PPMs}). Each utilizes a Markov-like process. That is, a model state is initialized and updated sequentially, where the updated state depends on the previous state. Each estimation algorithm decomposes into two simple operations on the initialized model state: reassigning a single observation from one cluster to another, and computing the marginal posterior mass at the current partition estimate. In practice, the `move' operation is further decomposed into `add' and `sub' operations to accommodate model state initialization.  
+
+Manipulating the model state with simple operations is strategic. By implementing a few simple operations efficiently, the estimation routines may be written with emphasis on simplicity and correctness. In addition, generic application of the estimation routines is reduced to implementing just two simple operations for each new PPM ({\it e.g.} for product partitions of linear or binary models).
+ 
+ The posterior mass function in a PPM is a product of cluster specific terms. Hence, moving a single observation from one cluster to another affects two of these terms at most. The posterior mass calculation is optimized by computing only the terms associated with clusters modified since the previous calculation. The optimization is implemented by decomposing the calculation into operations that compute only the cluster-specific terms, and an operation that computes cluster-independent terms. Computing posterior mass at a given partition state is further simplified by selecting a conjugate likelihood and prior, since the posterior mass function then has a simplified form. However, nonconjugate models are equally applicable, provided the posterior mass is computable by numerical means.
+
+Each supported PPM has an associated \proglang{C} structure containing data arrays, variables for model fitting parameters, and pointers to functions that perform the simple operations necessary for estimation. These structures hold the partition state, and their references are passed to and from the estimation methods. Additional PPMs may be supported by defining new state structures and the associated simple operations. Readers interested in extending the \pkg{profdpm} package are encouraged to explore the \pkg{profdpm} source code, available in the supplementary material. The PPM of binary models implementation (\code{src/pdpmbm.c}) is the simplest of the two implemented models.
 
 \subsection[R code]{\proglang{R} code}
 
 The \code{profLinear} function fits a product partition of conjugate normal linear models:
 \begin{eqnarray}
-y_i | \bx_i, z_i = k, \bmu_k, \tau_k & \sim & N(\bx^{\prime}\bmu_k, \tau_k) \nonumber \\
+y_i | \bx_i, z_i = k, \bmu_k, \tau_k & \sim & N(\bx_i^{\prime}\bmu_k, \tau_k) \nonumber \\
 \bmu_k, \tau_k & \sim & N_qG(\bm_0, s_0I_q, a_0/2, 2/b_0) \nonumber \\
 \bz & \sim & \pi_{\bz}(\bz) \propto \prod_{k=1}^r \alpha \Gamma(n_k)^{\lambda},
 \end{eqnarray}
@@ -125,21 +168,6 @@ y_{ij} | z_i = k, \phi_{kj} & \sim & B(\phi_{kj}) \nonumber \\
 \end{eqnarray}
 where $y_{ij}$ for $j = 1,\ldots,q$ is the $j^{th}$ binary observation for a subject $i$, $B$ represents the Bernoulli distribution with probability $\phi_{kj}$, and $\beta$ represents the beta distribution with shape parameters $a_0$ and $b_0$. Conditional on an estimated partition, $\phi_{kj}$ are independently beta distributed {\it a posteriori} with shape parameters $a_{kj}$ and $b_{kj}$. The \code{profBinary} function returns the estimated data partition as well as the posterior statistics $a_{kj}$ and $b_{kj}$.
 
-\subsection[C code]{\proglang{C} code}
-
-The \pkg{profdpm} package implements the product partition model as a state machine. The model state may be simple or complex, depending on the resources of the target platform and the available programming effort. A simple model state might store only the original data arrays, an array of cluster membership variables, and various scalars to hold array dimensions and other required parameters. The corresponding posterior mass function must compute each term in equation \ref{eqn:posterior}, and any intermediate quantities at every evaluation. Hence, this state is memory efficient at the expense of additional computation. 
-
-Increasingly complex model states (and code) generally result in reduced computational burden. For example, linear models with covariate vector $\bx_i$ often involve the outer product $\bx_i\bx_i^{\prime}$. A computationally efficient method would compute and store this quantity once, rather than recompute the quantity on demand. Furthermore, since $\bx_i\bx_i^{\prime}$ is symmetric, only the upper or lower triangular portion needs storage. The PPM of linear models implemented in the \pkg{profdpm} package utilizes both optimizations. 
-
-The balance between model state complexity and computational efficiency is a matter for experimentation. The \pkg{profdpm} package leaves the programmer free to experiment by offering a uniform interface to the partition estimation methods.
-
-The \pkg{profdpm} package implements three methods for partition estimation (see section \ref{PPMs}). Each utilizes a Markov-like process. That is, a model state is initialized and updated sequentially, where the updated state depends on the previous state. Each estimation algorithm decomposes into two simple operations on the initialized model state: reassigning a single observation from one cluster to another, and computing the marginal posterior mass at the current partition estimate. In practice, the `move' operation is further decomposed into `add' and `sub' operations to accommodate model state initialization.  
-
-Manipulating the model state with simple operations is strategic. By implementing a few simple operations efficiently, the estimation routines may be written with emphasis on simplicity and correctness. In addition, generic application of the estimation routines is reduced to implementing just two simple operations for each new PPM ({\it e.g.} for product partitions of linear or binary models).
- 
- The posterior mass function in a PPM is a product of cluster specific terms. Hence, moving a single observation from one cluster to another affects two of these terms at most. The posterior mass calculation is optimized by computing only the terms associated with clusters modified since the previous calculation. The optimization is implemented by decomposing the calculation into operations that compute only the cluster-specific terms, and an operation that computes cluster-independent terms. Computing posterior mass at a given partition state is further simplified by selecting a conjugate likelihood and prior, since the posterior mass function then has a simplified form. However, nonconjugate models are equally applicable, provided the posterior mass is computable by numerical means.
-
-Each supported PPM has an associated \proglang{C} structure containing data arrays, variables for model fitting parameters, and pointers to functions that perform the simple operations necessary for estimation. These structures hold the partition state, and their references are passed to and from the estimation methods. Additional PPMs may be supported by defining new state structures and the associated simple operations. Readers interested in extending the \pkg{profdpm} package are encouraged to explore the \pkg{profdpm} source code, available in the supplementary material. The PPM of binary models implementation (\code{src/pdpmbm.c}) is the simplest of the two implemented models.
 
 \section[Examples]{Examples: \code{profLinear}} \label{Examples:profLinear}
 This code example simulates a dataset consisting of three linear subgroups. The goal of this analysis is to recover the subgroup partition and perform profile inference on the slope parameter of each cluster. The following \proglang{R} code block creates and fits the simulated dataset. To establish reproducible results, the pseudo random number generator seed is fixed. However, repeating this example without the fixed seed is useful for guaging variability in the MAP estimate, which may be considerable.
