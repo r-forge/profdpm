@@ -7,16 +7,16 @@
 %% almost as usual
 
 \author{Matthew S. Shotwell\\Vanderbilt University}
-\title{\pkg{profdpm}: An \proglang{R} Package for MAP Estimation in a Class of Product Partition Models}
+\title{\pkg{profdpm}: An \proglang{R} Package for MAP Estimation in a Class of Conjugate Product Partition Models}
 
 %% for pretty printing and a nice hypersummary also set:
 \Plainauthor{Matthew S. Shotwell} %% comma-separated
-\Plaintitle{profdpm: An R Package for MAP Estimation in a Class of Product Partition Models} %% without formatting
+\Plaintitle{profdpm: An R Package for MAP Estimation in a Class of Conjugate Product Partition Models} %% without formatting
 %\Shorttitle{MAP Estimation in a Class of Product Partition Models} %% a short title (if necessary)
 
 %% an abstract and keywords
 \Abstract{
-The \pkg{profdpm} package facilitates inference at the posterior mode for a class of product partition models (PPM). The Dirichlet process mixture is represented as a specific case in this class, and is the default. The PPM is implemented for linear models and multivariate binary models. Several methods are implemented to search for the maximum posterior estimate of the data partition. This article discusses the relevant theory, the \proglang{R} and underlying \proglang{C} implementations, and examples of high level functionality.
+The \pkg{profdpm} package facilitates inference at the posterior mode for a class of conjugate product partition models (PPM). Conjugate Dirichlet process mixtures are represented as a specific case in this class, and is the default. The PPM is implemented for linear models and multivariate binary models. Several methods are implemented to search for the maximum posterior estimate of the data partition. This article discusses the relevant theory, the \proglang{R} and underlying \proglang{C} implementation, and examples of high level functionality.
 }
 \Keywords{product partition model, MAP estimate, clustering, \proglang{R}, \proglang{C}}
 \Plainkeywords{product partition model, MAP estimate, clustering, R, C} %% without formatting
@@ -51,6 +51,7 @@ The \pkg{profdpm} package facilitates inference at the posterior mode for a clas
 
 %% end of declarations %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\usepackage{setspace}
 \usepackage{amsbsy}
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\bu}{\boldsymbol{u}}
@@ -73,7 +74,7 @@ The \pkg{profdpm} package facilitates inference at the posterior mode for a clas
 \begin{document}
 
 \section[Intro]{Introduction}
-\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2010}. This package facilitates inference at the posterior mode in a class of product partition models (PPM) by approximating the maximum {\it a posteriori} data partition. The class of PPMs considered was motivated by a PPM formulation of the Dirichlet process mixture, which is a special case. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, and a function \code{pci} that computes several metrics of agreement between two partitions. However, \pkg{profdpm} was designed with extensibility in mind.
+\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2011}. This package facilitates inference at the posterior mode in a class of conjugate product partition models (PPM) by approximating the maximum {\it a posteriori} data partition. The class of PPMs considered was motivated by a PPM formulation of the Dirichlet process mixture, which is a special case. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, and a function \code{pci} that computes several metrics of agreement between two data partitions. However, \pkg{profdpm} was designed with extensibility in mind.
 
 The remainder of this article proceeds as follows: the relevant theory of product partition models is discussed in section \ref{PPMs}, \proglang{R} functions and the underlying \proglang{C} methods are outlined in section \ref{Code}, and examples are presented in sections \ref{Examples:profLinear} and \ref{Examples:profBinary}. Section \ref{Extensions} gives a short discussion of potential extensions to the \pkg{profdpm} package.\\
 
@@ -180,10 +181,11 @@ set.seed(42)
 
 #simulate data with 3 linear subgroups
 x <- as.matrix(runif(99))
-y <- c(0*x[1:33], 10*x[34:66], 20*x[67:99]) + rnorm(99)
+y <- c(0*x[1:33], -10*x[34:66], 10*x[67:99]) + rnorm(99)
+group <- rep(1:33, rep(3,33))
 #estimate linear partition
 library("profdpm")
-fit1 <- profLinear(y ~ 0 + x)
+fit1 <- profLinear(y ~ 0 + x, group=group)
 @
 Figure~\ref{fig:sim1} presents the simulated data in a scatterplot. For each cluster identified in the estimated partition, the profile posterior mean slope is represented by a dashed line with intercept zero. A $95\%$ credible interval for the slope is represented by two solid lines with slopes corresponding to the $0.025$ and $0.975$ quantiles of the profile posterior distribution over the slope parameter. These quantiles are computed using a parametric bootstrap.
 <<label=figSim1, include=FALSE>>=

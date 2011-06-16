@@ -1,4 +1,4 @@
-profBinary <- function(y, clust, param, method="stochastic", 
+profBinary <- function(y, clust, param, method="agglomerative", 
                        maxiter=1000, crit=1e-6, verbose=FALSE) {
   ###################################################
   #do some argument checking
@@ -59,9 +59,11 @@ profBinary <- function(y, clust, param, method="stochastic",
   else if( method == "stochastic" )    { method <- 1 }
   else if( method == "agglomerative" ) { method <- 2 }
   else if( method == "gibbs" )         { method <- 3 }
+  else if( method == "fast" )          { method <- 4 }
   else {
-    method <- 1 #default is "stochastic"
-    warning("method must be \'stochastic\', \'agglomerative\', or \'none\'", )
+      method <- 2 #default is "agglomerative"
+      warning("method must be \'stochastic\', \'agglomerative\',
+          \'gibbs\', \'fast\' or \'none\'", )
   }
 
   ###################################################

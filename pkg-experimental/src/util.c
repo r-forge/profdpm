@@ -33,7 +33,7 @@ unsigned int rlcat( double * logp, unsigned int n ) {
     return ret;
 }
 
-/* R */
+/* From 'Writing R Extenstions' */
 
 SEXP getListElementByName(SEXP list, const char * name) {
     SEXP elem = R_NilValue, names = getAttrib(list, R_NamesSymbol);

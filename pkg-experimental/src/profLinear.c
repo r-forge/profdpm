@@ -6,10 +6,10 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     SEXP retval, elem, names, class, dim;
     pdpm_t * obj;
     pdpmlm_t * mdl;
-    int i, j, k, cls, onei=1; 
+    int i, j, k, cls, onei=1, gr; 
     double *xp, *yp, oned=1.0;
 
-    //0. setup the return value 
+    // setup the return value 
     PROTECT(retval = allocVector(VECSXP, 10));
     PROTECT(names = allocVector(STRSXP, 10));
     PROTECT(class = allocVector(STRSXP, 1));
@@ -28,37 +28,83 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
     setAttrib(retval, R_ClassSymbol, class);
     SET_VECTOR_ELT(retval, 0, y);
     SET_VECTOR_ELT(retval, 1, x);
+    dim = getAttrib(x, R_DimSymbol); 
     SET_VECTOR_ELT(retval, 2, group);
     SET_VECTOR_ELT(retval, 3, param);
     SET_VECTOR_ELT(retval, 4, allocVector(INTSXP, LENGTH(y)));
 
-    //1. Allocate and initialize generic PPM object, check arguments
-    obj = (pdpm_t *) R_alloc( 1, sizeof(pdpm_t) );
-    obj->mem = sizeof(pdpm_t);
-
     //allocate linear PPM structure
-    obj->model = (pdpmlm_t *) pdpm_alloc(obj, 1, sizeof(pdpmlm_t));
-    mdl = obj->model; //this is a convenience pointer
-
-    //set flags
-    obj->flags   = 0;
-    if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
+    mdl = (pdpmlm_t *) R_alloc( 1, sizeof(pdpmlm_t) );
 
     //set pointers to data
     mdl->y   = REAL(y);
     mdl->x   = REAL(x);
     mdl->vgr = (unsigned int *) INTEGER(group);
-    dim             = getAttrib(x, R_DimSymbol); 
     mdl->p   = INTEGER(dim)[ 0 ];
     mdl->q   = INTEGER(dim)[ 1 ];
+
+    //allocate memory for pgr
+    mdl->pgr = (unsigned int *) R_alloc( mdl->p, sizeof(unsigned int) );
+
+    //compute pgr, ngr
+    gr = 0;
+    for( i = 0; i < mdl->p; i++ ) { mdl->pgr[ i ] = 0; }
+    for( i = 0; i < mdl->p; i++ ) { mdl->pgr[ mdl->vgr[ i ] ]++; }
+    for( i = 0; i < mdl->p; i++ ) { if( mdl->pgr[ i ] > 0 ) { gr++; } }
+
+    //allocate and initialize generic PPM object
+    obj = pdpm_init(gr);
+    obj->mem += mdl->p * sizeof(unsigned int) + sizeof(pdpmlm_t);
+ 
+    //set flags
+    if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
+
+    //set pointers to methods
+    obj->move     = &pdpmlm_move;
+    obj->logp     = &pdpmlm_logp;
+    obj->logponly = &pdpmlm_logponly;
+    obj->model    = mdl;
+
+    //allocate and zero memory for xxgr xygr, and yygr
+    mdl->pcl  = (unsigned int *) pdpm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
+    mdl->xxgr = (double **) pdpm_alloc( obj, obj->ngr, sizeof(double *) );
+    mdl->xygr = (double **) pdpm_alloc( obj, obj->ngr, sizeof(double *) );
+    mdl->yygr = (double *)  pdpm_alloc( obj, obj->ngr, sizeof(double) );
+    for( i = 0; i < obj->ngr; i++ ) {
+        //xxgr is symmetric packed
+        mdl->xxgr[ i ] = (double *) pdpm_zalloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
+        mdl->xygr[ i ] = (double *) pdpm_zalloc( obj, mdl->q, sizeof(double) );
+        mdl->yygr[i] = 0.0;
+    }
+  
+    //compute xxgr, xygr, yygr
+    for( i = 0; i < mdl->p; i++ ) {
+        xp = mdl->x + i;
+        yp = mdl->y + i; 
+        //xxgr += xx' , symmetric packed
+        F77_CALL(dspr)("U", (int *) &mdl->q, &oned, xp, (int *) &mdl->p, mdl->xxgr[ mdl->vgr[ i ] ] );
+        //xygr += xy
+        F77_CALL(daxpy)((int *) &mdl->q, yp, xp, (int *) &mdl->p, mdl->xygr[ mdl->vgr[ i ] ], &onei); 
+        //yygr += yy
+        mdl->yygr[ mdl->vgr[ i ] ] += (*yp) * (*yp);
+    }
+  
+    //allocate and zero xxcl, xycl, yycl
+    mdl->xxcl = (double **) pdpm_zalloc( obj, obj->ngr, sizeof(double *) );
+    mdl->xycl = (double **) pdpm_zalloc( obj, obj->ngr, sizeof(double *) );
+    mdl->yycl = (double *)  pdpm_zalloc( obj, obj->ngr, sizeof(double) );
+
+    //allocate s, m, fbuf, and pbuf
+    //s is symmetric packed
+    mdl->s = (double *) pdpm_alloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
+    mdl->m = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
+    mdl->fbuf = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
+
 
     //check values in param list
     elem = getListElementByName(param, "lambda");
     if( elem == R_NilValue ) { 
         obj->lam = DEFAULT_LAM; 
-    } else if( REAL(elem)[0] < -1 || REAL(elem)[0] > 1 ) {
-        warning( "list item \"lambda\" must be between -1 and 1, using default value" );
-        obj->lam = DEFAULT_LAM;
     } else { obj->lam = REAL(elem)[0]; }
     elem  = getListElementByName(param, "alpha");
     if( elem == R_NilValue ) {
@@ -98,62 +144,6 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
         mdl->b0 = DEFAULT_LM_B0;
     } else { mdl->b0 = REAL(elem)[0]; }
  
-    //set pointers to methods
-    obj->divy     = &pdpmlm_divy;
-    obj->move     = &pdpmlm_move;
-    obj->logp     = &pdpmlm_logp;
-    obj->logponly = &pdpmlm_logponly;
-
-    //allocate memory for pgr
-    mdl->pgr = (unsigned int *) pdpm_zalloc( obj, mdl->p, sizeof(unsigned int) );
-
-    //compute pgr, ngr
-    obj->ngr = 0;
-    for( i = 0; i < mdl->p; i++ ) { mdl->pgr[ mdl->vgr[ i ] ]++; }
-    for( i = 0; i < mdl->p; i++ ) { if( mdl->pgr[ i ] > 0 ) { obj->ngr++; } }
-
-    //allocate and zero memory vcl, gcl, pcl, and ncl
-    obj->ncl = 0;
-    obj->vcl = (unsigned int *) pdpm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-    obj->gcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
-    for( i = 0; i < obj->ngr; i++ ) { obj->vcl[ i ] = BAD_VCL; }
-    mdl->pcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
-
-    //allocate and zero memory for xxgr xygr, and yygr
-    mdl->xxgr = (double **) pdpm_alloc( obj, obj->ngr, sizeof(double *) );
-    mdl->xygr = (double **) pdpm_alloc( obj, obj->ngr, sizeof(double *) );
-    mdl->yygr = (double *)  pdpm_alloc( obj, obj->ngr, sizeof(double) );
-    for( i = 0; i < obj->ngr; i++ ) {
-        //xxgr is symmetric packed
-        mdl->xxgr[ i ] = (double *) pdpm_zalloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
-        mdl->xygr[ i ] = (double *) pdpm_zalloc( obj, mdl->q, sizeof(double) );
-        mdl->yygr[i] = 0.0;
-    }
-  
-    //compute xxgr, xygr, yygr
-    for( i = 0; i < mdl->p; i++ ) {
-        xp = mdl->x + i;
-        yp = mdl->y + i; 
-        //xxgr += xx' , symmetric packed
-        F77_CALL(dspr)("U", (int *) &mdl->q, &oned, xp, (int *) &mdl->p, mdl->xxgr[ mdl->vgr[ i ] ] );
-        //xygr += xy
-        F77_CALL(daxpy)((int *) &mdl->q, yp, xp, (int *) &mdl->p, mdl->xygr[ mdl->vgr[ i ] ], &onei); 
-        //yygr += yy
-        mdl->yygr[ mdl->vgr[ i ] ] += (*yp) * (*yp);
-    }
-  
-    //allocate and zero xxcl, xycl, yycl
-    mdl->xxcl = (double **) pdpm_zalloc( obj, obj->ngr, sizeof(double *) );
-    mdl->xycl = (double **) pdpm_zalloc( obj, obj->ngr, sizeof(double *) );
-    mdl->yycl = (double *)  pdpm_zalloc( obj, obj->ngr, sizeof(double) );
-
-    //allocate s, m, fbuf, and pbuf
-    //s is symmetric packed
-    mdl->s = (double *) pdpm_alloc( obj, ( mdl->q * ( mdl->q + 1 ) ) / 2, sizeof(double) );
-    mdl->m = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
-    mdl->fbuf = (double *) pdpm_alloc( obj, mdl->q, sizeof(double) );
-    obj->pbuf = (unsigned int *) pdpm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-
     //9. distribute clusters initially and perform optimization
     if( isInteger(clust) ) {
         i = 0;
@@ -165,15 +155,15 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
   
     //branch to specific optimization routines
     if( INTEGER(method)[0] == METHOD_NONE ) {
-        if( isLogical(clust) ) { obj->divy( obj ); }
+        if( isLogical(clust) ) { method_fast( obj ); }
         obj->logpval = obj->logp( obj );
     } else if( INTEGER(method)[0] == METHOD_STOCH ) {
-        if( isLogical(clust) ) { obj->divy( obj ); }
+        if( isLogical(clust) ) { method_fast( obj ); }
         GetRNGstate();
         method_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
         PutRNGstate();
     } else if( INTEGER(method)[0] == METHOD_GIBBS ) {
-        if( isLogical(clust) ) { obj->divy( obj ); }
+        if( isLogical(clust) ) { method_fast( obj ); }
         GetRNGstate();
         method_gibbs( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
         PutRNGstate();
@@ -182,8 +172,7 @@ SEXP profLinear(SEXP y, SEXP x, SEXP group, SEXP clust,\
             for( i = 0; i < obj->ngr; i++ )
                 obj->move( obj, i, i );
         method_agglo( obj, INTEGER(maxiter)[0] );
-    }
-    else if( INTEGER(method)[0] == METHOD_FAST ) {
+    } else if( INTEGER(method)[0] == METHOD_FAST ) {
         if(!isLogical(clust))
             warning("\'clust\' argument ignored for \'fast\' method");
         method_fast( obj );

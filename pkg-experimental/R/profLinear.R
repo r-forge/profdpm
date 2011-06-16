@@ -1,4 +1,4 @@
-profLinear <- function(formula, data, group, clust, param, method="stochastic", 
+profLinear <- function(formula, data, group, clust, param, method="agglomerative", 
                        maxiter=1000, crit=1e-6, verbose=FALSE) {
     ###################################################
     #argument checking
@@ -27,7 +27,7 @@ profLinear <- function(formula, data, group, clust, param, method="stochastic",
     }
 
     if(missing(param)) { 
-        param <- list(alpha=1/150,a0=1,b0=1,m0=rep(0,ncol(mm)),s0=0.1)
+        param <- list(alpha=1/150,a0=0.001,b0=0.001,m0=rep(0,ncol(mm)),s0=1)
     } else if(!is.list(param)) {
         stop("param must be a list")
     } else {
@@ -56,7 +56,7 @@ profLinear <- function(formula, data, group, clust, param, method="stochastic",
     mg  <- model.extract(mf, "group")
     mg  <- as.integer(unclass(mg)-1)
     if(!is.logical(clust)) {
-        mc  <- model.extract(mc, "clust")
+        mc  <- model.extract(mf, "clust")
         mc  <- as.integer(unclass(mc)-1)
     } else {
         mc  <- FALSE
@@ -70,7 +70,9 @@ profLinear <- function(formula, data, group, clust, param, method="stochastic",
     else if( method == "gibbs" )         { method <- 3 }
     else if( method == "fast" )          { method <- 4 }
     else {
-        stop("invalid method")
+        method <- 2 #default is "agglomerative"
+        warning("method must be \'stochastic\', \'agglomerative\',
+            \'gibbs\', \'fast\' or \'none\'", )
     }
 
     ###################################################
