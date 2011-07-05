@@ -7,11 +7,11 @@ profLinear <- function(formula, data, group, clust, param, method="agglomerative
     mf <- model.frame(formula, data)
     mm <- model.matrix(formula, data)
     mr <- model.response(mf, "numeric")
-
-    if(missing(group))
-        group <- seq(1, length(mr)) 
-
-    group <- as.factor(group)
+    if(missing(group)) {
+        data$group <- seq(1, length(mr))
+    } else {
+        data$group <- as.factor(eval(substitute(group), data, environment(formula)))
+    }
     mf <- model.frame(formula, data, group=group)
 
     if(missing(clust)) { 
@@ -50,6 +50,7 @@ profLinear <- function(formula, data, group, clust, param, method="agglomerative
     #convert ordered group to integers from 0,1,...
     #convert ordered clust to integers from 0,1,...
     ord <- order(mf[["(group)"]])
+    mfo <- mf
     mf  <- mf[ord,]
     mr  <- model.response(mf, "double")
     mm  <- model.matrix(formula, mf)
@@ -88,5 +89,6 @@ profLinear <- function(formula, data, group, clust, param, method="agglomerative
     ret$clust[ord] <- ret$clust
     #ret$clust <- unclass(as.factor(ret$clust))
     #attributes(ret$clust) <- NULL
+    ret$model <- mfo
     return(ret)  
 }
