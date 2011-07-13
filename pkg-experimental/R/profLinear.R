@@ -27,15 +27,25 @@ profLinear <- function(formula, data, group, clust, param, method="agglomerative
     }
 
     if(missing(param)) { 
-        param <- list(alpha=1/150,a0=0.001,b0=0.001,m0=rep(0,ncol(mm)),s0=1)
+        param <- list()
     } else if(!is.list(param)) {
-        stop("param must be a list")
+        warning("param must be a list, using defaults")
+        param <- list()
     } else {
-        if(length(names(param)) == 0)
-            stop("param argument has no named items")
-        if(length(param) > length(names(param)))
+        if(length(names(param)) == 0) {
+            warning("param argument has no named items, using defaults")
+            param <- list()
+        } else if(length(param) > length(names(param))) {
             warning("param has unnamed items")
+        }
     }
+
+    if(is.null(param$alpha)) param$alpha <- 1/150
+    if(is.null(param$a0)) param$a0 <- 0.001
+    if(is.null(param$b0)) param$b0 <- 0.001
+    if(is.null(param$m0)) param$m0 <- rep(0,ncol(mm))
+    if(is.null(param$s0)) param$s0 <- 1.000
+
     if(!is.character(method))
         stop("method must be a character string")
     if(!is.numeric(maxiter) | maxiter < 0)

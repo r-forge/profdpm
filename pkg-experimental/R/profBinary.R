@@ -14,18 +14,23 @@ profBinary <- function(formula, data, clust, param, method="agglomerative",
           stop("nrow(data) must equal length(clust)")  
     }
     if(missing(param)) {
-        param <- list(alpha=1/150,a0=1.00,b0=1.00) 
+        param <- list() 
     } else if(!is.list(param)) {
         warning("param must be a list, using defaults")
-        param <- list(alpha=1/150,a0=1.00,b0=1.00) 
+        param <- list() 
     } else {
         if(length(names(param)) == 0) {
             warning("param argument does not include any named items, using defaults")
-            param <- list(alpha=1/150,a0=1.00,b0=1.00)
+            param <- list()
         } else if(length(param) > length(names(param))) {
             warning("param contains unnamed items")
         }
     }
+
+    if(is.null(param$alpha)) param$alpha <- 1/150
+    if(is.null(param$a0)) param$a0 <- 1.00
+    if(is.null(param$b0)) param$b0 <- 1.00
+
     if(!is.character(method)) {
         warning("method must be a character string, using default")
         method <- "stochastic"

@@ -1,2 +1,0 @@
-- add print and summary methods
-- make sure that all prior parameters are returned by the .Call
