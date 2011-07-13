@@ -27,30 +27,32 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     dim = getAttrib(y, R_DimSymbol); 
     SET_VECTOR_ELT(retval, 2, allocVector(INTSXP, INTEGER(dim)[ 0 ]));
 
-    //allocate obj, make assignments, check priors
-    obj = (pdpm_t *) R_alloc( 1, sizeof(pdpm_t) );
-    obj->mem = sizeof(pdpm_t);
+    //allocate and initialize generic PPM object
+    obj = pdpm_init(INTEGER(dim)[ 0 ]);
+
+    //set flags
+    if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
+
+    //set pointers to pdpmbm methods
+    obj->move     = &pdpmbm_move;
+    obj->logp     = &pdpmbm_logp;
+    obj->logponly = &pdpmbm_logponly;
 
     //allocate model, convenience pointer
     obj->model = (pdpmbm_t *) pdpm_alloc( obj, 1, sizeof(pdpmbm_t) );
     mdl = obj->model;
 
-    //set flags
-    obj->flags   = 0;
-    if( LOGICAL(verbose)[0] )    { obj->flags |= FLAG_VERBOSE; }
-
     //set pointers to data
     mdl->y = INTEGER(y);
     mdl->q = INTEGER(dim)[ 1 ];
-    obj->ngr = INTEGER(dim)[ 0 ];
+   
+    //allocate and zero memory gqcl
+    mdl->gqcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr * mdl->q, sizeof(unsigned int) );
 
-  //check values in param list
+    //check values in param list
     elem = getListElementByName(param, "lambda");
     if( elem == R_NilValue ) { obj->flags != FLAG_DIRICHL; obj->lam = 0; }
-    else if( REAL(elem)[0] < 0 || REAL(elem)[0] > 1 ) {
-        warning( "list item \"lambda\" must be between zero and one, using default value" );
-        obj->lam = DEFAULT_LAM;
-    } else { obj->lam = REAL(elem)[0]; }
+    else { obj->lam = REAL(elem)[0]; }
     elem = getListElementByName(param, "alpha");
     if( elem == R_NilValue ) {
         obj->alp = DEFAULT_ALP;
@@ -73,43 +75,34 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
         mdl->b0 = DEFAULT_BM_B0;
     } else { mdl->b0 = REAL(elem)[0]; }
 
-    //set pointers to methods
-    obj->divy     = &pdpmbm_divy;
-    obj->move     = &pdpmbm_move;
-    obj->logp     = &pdpmbm_logp;
-    obj->logponly = &pdpmbm_logponly;
-
-    //allocate and zero memory ncl, vcl, gcl, gqcl, pbuf
-    obj->ncl = 0;
-    obj->vcl = (unsigned int *) pdpm_alloc( obj, obj->ngr, sizeof(unsigned int) );
-    obj->gcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr, sizeof(unsigned int) );
-    obj->pbuf = (unsigned int *) pdpm_alloc( obj, obj->ngr, sizeof(unsigned int) ); 
-    for( i = 0; i < obj->ngr; i++ ) obj->vcl[ i ] = BAD_VCL; 
-    mdl->gqcl = (unsigned int *) pdpm_zalloc( obj, obj->ngr * mdl->q, sizeof(unsigned int) );
-
-    //9. distribute clusters initially and perform optimization
+    //distribute clusters initially
     if( isInteger(clust) )
         for( j = 0; j < obj->ngr; j++ )
             obj->move( obj, j, INTEGER(clust)[j] ); 
   
     //dispatch optimization routine
     if( INTEGER(method)[0] == METHOD_NONE ) {
-        if( isLogical(clust) ) { obj->divy( obj ); }
+        if( isLogical(clust) ) { method_fast( obj ); }
         obj->logpval = obj->logp( obj );
     } else if( INTEGER(method)[0] == METHOD_STOCH ) {
-        if( isLogical(clust) ) { obj->divy( obj ); }
+        if( isLogical(clust) ) { method_fast( obj ); }
         GetRNGstate();
         method_stoch( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
         PutRNGstate();
     } else if( INTEGER(method)[0] == METHOD_GIBBS ) {
-        if( isLogical(clust) ) { obj->divy( obj ); }
+        if( isLogical(clust) ) { method_fast( obj ); }
         GetRNGstate();
         method_gibbs( obj, INTEGER(maxiter)[0], REAL(crit)[0] );
         PutRNGstate();
-    }
-    else if( INTEGER(method)[0] == METHOD_AGGLO ) {
-        if( isLogical(clust) ) { for( i = 0; i < obj->ngr; i++ ) { obj->move( obj, i, i ); } }
+    } else if( INTEGER(method)[0] == METHOD_AGGLO ) {
+        if( isLogical(clust) )
+            for( i = 0; i < obj->ngr; i++ ) 
+                obj->move( obj, i, i );
         method_agglo( obj, INTEGER(maxiter)[0] );
+    } else if( INTEGER(method)[0] == METHOD_FAST ) {
+        if(!isLogical(clust))
+            warning("\'clust\' argument ignored for \'fast\' method");
+        method_fast( obj );
     }
   
     //check optimization criterion
@@ -118,15 +111,16 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     if( obj->flags & FLAG_VERBOSE )
         pdpm_printf( "allocated memory: %fMb\n", obj->mem/1000000.0 );
 
-    //10. complete the return value
+    //complete the return value
     SET_VECTOR_ELT(retval, 3, allocVector(VECSXP, obj->ncl)); //a
     SET_VECTOR_ELT(retval, 4, allocVector(VECSXP, obj->ncl)); //b
     SET_VECTOR_ELT(retval, 5, allocVector(REALSXP, 1)); //logp
     REAL(VECTOR_ELT(retval, 5))[0] = obj->logpval;
 
-    for( i = 0; i < obj->ngr; i++ ) { obj->pbuf[ i ] = BAD_VCL; }
+    for( i = 0; i < obj->ngr; i++ )
+        obj->pbuf[ i ] = BAD_VCL;
 
-    //10.1 remap cluster labels 1--ncl
+    //remap cluster labels 1--ncl
     cls = 1;
     for( i = 0; i < obj->ngr; i++ ) { 
         if( obj->pbuf[ obj->vcl[ i ] ] == BAD_VCL )

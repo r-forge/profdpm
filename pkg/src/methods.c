@@ -1,5 +1,23 @@
 #include "profdpm.h"
 
+pdpm_t *     pdpm_init(unsigned int ngr) {
+    unsigned int i;
+    pdpm_t * obj = R_alloc(1, sizeof(pdpm_t));
+    obj->flags = 0;
+    obj->mem = sizeof(pdpm_t);
+    obj->vcl = pdpm_alloc(obj, ngr, sizeof(unsigned int));
+    obj->gcl = pdpm_zalloc(obj, ngr, sizeof(unsigned int));
+    obj->pbuf = pdpm_alloc(obj, ngr, sizeof(unsigned int));
+    obj->ngr = ngr;
+    obj->ncl = 0;
+    obj->move     = NULL;
+    obj->logp     = NULL;
+    obj->logponly = NULL;
+    for( i = 0; i < obj->ngr; i++ )
+        obj->vcl[ i ] = BAD_VCL;
+    return obj;
+}
+
 void * pdpm_alloc( pdpm_t * obj, unsigned int count, unsigned int size ) {
     obj->mem += count * size;
     return R_alloc( count, size );
@@ -382,7 +400,7 @@ void method_agglo( pdpm_t * obj, int maxiter ) {
             obj->ncl, obj->logpval);
 }
 
-/* Fast method, adapted from Wang & Dunson (2010) */
+/* Fast method, adapted from SUGS, Wang & Dunson (2010) */
 void method_fast(pdpm_t * obj) {
     //strategy: 
     // 1. Select an ordering at random

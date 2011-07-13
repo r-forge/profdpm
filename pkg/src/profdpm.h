@@ -23,7 +23,10 @@
 #define rlcat_runif runif
 
 /* stats */
+//approximate the log factorial
 double       lfactorial(unsigned int x);
+//draw a categorical random variate, specifying the
+//unnormalized log probabilities 
 unsigned int rlcat(double * logp, unsigned int n);
 
 /* R */
@@ -49,14 +52,14 @@ SEXP         getListElementByName(SEXP list, const char * name);
 
 //pdpm defaults
 #define DEFAULT_LAM    1.000
-#define DEFAULT_ALP    0.006666667
+#define DEFAULT_ALP    0.006666667  // 1/150
 #define BAD_VCL UINT_MAX
 
 //pdpmlm defaults
-#define DEFAULT_LM_A0     1.000
-#define DEFAULT_LM_B0     1.000
+#define DEFAULT_LM_A0     0.001
+#define DEFAULT_LM_B0     0.001
 #define DEFAULT_LM_M0     0.000
-#define DEFAULT_LM_S0     0.100
+#define DEFAULT_LM_S0     1.000 
 
 //pdpmbm defaults
 #define DEFAULT_BM_A0     1.000
@@ -67,6 +70,10 @@ SEXP         getListElementByName(SEXP list, const char * name);
 #define FLAG_OPTCRIT  1<<1  //has optimization criterion been met
 #define FLAG_DIRICHL  1<<2  //use cluster Dirichlet prior
 #define FLAG_SINGULA  1<<3  //singularities in optimization
+#define FLAG_UNUSED1  1<<4
+#define FLAG_UNUSED2  1<<5
+#define FLAG_UNUSED3  1<<6
+#define FLAG_UNUSED4  1<<7
 
 //pdpm_t is a generic data type representing the elements of 
 //a product partition model
@@ -88,11 +95,6 @@ unsigned int    ngr;  // number of groups
 //or equal to ngr.
 unsigned int    ncl;
 
-//gcl - number of groups in each cluster
-//Hence, gcl[ cls ] is the number of groups in cluster cls The gcl array is of
-//length ngr, the number of groups.
-unsigned int  * gcl;  
-
 //vcl - cluster membership vector
 //Each of the ngr groups has an entry in vcl indicating cluster membership. The
 //group indicator indexes the values in vcl. Hence, 'vcl[ 0 ]' indexes the
@@ -101,24 +103,26 @@ unsigned int  * gcl;
 //BAD_CLS macro.
 unsigned int  * vcl;
 
+//gcl - number of groups in each cluster
+//Hence, gcl[ cls ] is the number of groups in cluster cls The gcl array is of
+//length ngr, the number of groups.
+unsigned int  * gcl;  
+
 //unnormalized log posterior value
 //This value is used to store the log posterior value for the current state,
 //unless the value was not computed after a change in state. Good practice 
 //dictates that this value should be updated at every state change.
 double          logpval;
 
-//temporary storage of length ngr, used by pdpmlm routines 
+//temporary storage of length ngr, use by optimization methods 
 unsigned int  * pbuf;
 
 //memory usage counter
 //This value enumerates the number of bytes allocated by the optimization
-//routine using Ralloc, or similar.
+//routine using pdpm_alloc.
 unsigned int    mem;    
 
 //These function pointers are implemented separately for each type of PPM.
-
-//Assign the groups to clusters according to a simple algorithm
-void         (*divy)( struct pdpm_t * obj);
 
 //Assign or reassign group grp to cluster cls
 void         (*move)( struct pdpm_t * obj, unsigned int grp, unsigned int cls );
@@ -129,7 +133,7 @@ double       (*logp)( struct pdpm_t * obj );
 //Compute the log posterior value only for the clusters given by only[0:(size-1)]
 double       (*logponly)( struct pdpm_t * obj, unsigned int * only, unsigned int size );
 
-//model struct pointer
+//PPM specific model struct pointer
 void        *model;
 
 } pdpm_t;
@@ -142,6 +146,9 @@ void        *model;
 #define METHOD_FAST   4
 
 //These functions operate generically on the PPM data structure pdpm_t
+
+//Allocate memory for an instance of pdpm_t
+pdpm_t *     pdpm_init(unsigned int ngr);
 
 //Allocate memory and count usage in obj->mem
 void *       pdpm_alloc( pdpm_t * obj, unsigned int count, unsigned int size );
@@ -248,9 +255,6 @@ double        * fbuf;   //temporary storage for fortran routines (array of lengt
 
 } pdpmlm_t;
 
-//Assign the observations/groups according to a simple algorithm
-void         pdpmlm_divy( pdpm_t * obj );
-
 //Add an observation/group to a cluster cls
 void         pdpmlm_add( pdpm_t * obj, unsigned int grp, unsigned int cls );
 
@@ -294,9 +298,6 @@ double        * b;      //storage for a vector (length q)
 
 } pdpmbm_t;
 
-//Assign the observations/groups according to a simple algorithm
-void         pdpmbm_divy( pdpm_t * obj );
-
 //Add an observation/group to a cluster cls
 void         pdpmbm_add( pdpm_t * obj, unsigned int grp, unsigned int cls );
 
@@ -305,9 +306,6 @@ void         pdpmbm_sub( pdpm_t * obj, unsigned int grp, unsigned int cls );
 
 //Assign or reassign group grp to cluster cls
 void         pdpmbm_move( pdpm_t * obj, unsigned int grp, unsigned int cls );
-
-//Compute the posterior parameters s, m, a, and b for a given cluster
-void         pdpmbm_parm( pdpm_t * obj, unsigned int cls, double * a, double * b );
 
 //Compute part of the log posterior value for a particular cluster
 double       pdpmbm_logpcls( pdpm_t * obj, unsigned int cls );

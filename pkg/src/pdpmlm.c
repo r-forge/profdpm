@@ -1,28 +1,5 @@
 #include "profdpm.h"
 
-void pdpmlm_divy( pdpm_t * obj ) {
-    pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
-    unsigned int i, grp = 0, cls = 0, set = 0;
-    double a, b;
-    pdpmlm_add( obj, grp, cls );
-    for( grp = 1; grp < obj->ngr; grp++ ) {
-        for( cls = 0; cls < obj->ncl; cls++ ) {
-            pdpmlm_parm( obj, cls, mdl->s, mdl->m, &a, &b, &mdl->d );
-            pdpmlm_add( obj, grp, cls );
-            pdpmlm_parm( obj, cls, mdl->s, mdl->m, &mdl->a, &mdl->b, &mdl->d );
-            //Generally precision (a/b) is decreased with addition 
-            //of a group to a cluster. We accept the addition when
-            //the the precision changes by more than 0.95 fold
-            if( ( (mdl->a / mdl->b) / (a / b) ) > 0.95 ) { break; }
-            else { pdpmlm_sub( obj, grp, cls ); }
-        }
-        if( cls == obj->ncl ) { pdpmlm_add( obj, grp, cls ); } 
-    }
-    obj->logpval = obj->logp( obj );
-    if( obj->flags & FLAG_VERBOSE )
-        pdpm_printf("initialized: logp: %f\n", obj->logp ); 
-}
-
 void pdpmlm_add( pdpm_t * obj, unsigned int grp, unsigned int cls ) {
     pdpmlm_t * mdl = (pdpmlm_t *) obj->model;
     unsigned int i, j, index;
@@ -138,6 +115,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
 
     //m = (s)^(-1) * m
     //dppsv overwrites s, must reload s aftward.
+/*
     ipiv = (int *) mdl->fbuf;
     F77_CALL(dppsv)("U", (int *) &mdl->q, &ione, s, m, (int *) &mdl->q, &info);
     if( info < 0 ) error("dppsv: invalid argument");
@@ -153,7 +131,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
                 index++;
             }
         }
-
+*/
         //m = (s)^(-1) * m
         //dspsv overwrites s, must reload s aftward.
         ipiv = (int *) mdl->fbuf;
@@ -173,6 +151,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
             }
         }
         *d *= 0.5;
+/*
     } else {
         //d = 0.5*log|det(s)| (see dppsv documentation)
         *d = 0.0;
@@ -180,7 +159,7 @@ void pdpmlm_parm( pdpm_t * obj, unsigned int cls, double * s, double * m, double
             *d += log( ABS( s[ UMAT(i, i) ] ) );
         *d *= 0.5;
     }
-  
+*/  
     //reload s
     index = 0;
     for( i = 0; i < mdl->q; i++ ) {

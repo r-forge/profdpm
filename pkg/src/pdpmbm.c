@@ -1,14 +1,5 @@
 #include "profdpm.h"
 
-void pdpmbm_divy( pdpm_t * obj ) {
-    unsigned int i, grp = 0;
-    for( grp = 0; grp < obj->ngr; grp++ )
-        pdpmbm_add( obj, grp, grp );
-    obj->logpval = obj->logp( obj );
-    if( obj->flags & FLAG_VERBOSE )
-        pdpm_printf("initialized: logp: %f\n", obj->logpval );
-}
-
 void pdpmbm_add( pdpm_t * obj, unsigned int grp, unsigned int cls ) {
     pdpmbm_t * mdl = (pdpmbm_t *) obj->model;
     unsigned int i, j, index;
