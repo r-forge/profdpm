@@ -7,10 +7,11 @@
     \code{summary.profBinary} is an S3 method to summarize objects of the class \code{profBinary}.
 }
 \usage{
-summary.profBinary(x)
+\method{summary}{profBinary}(object, ...)
 }
 \arguments{
-  \item{x}{an instance of class \code{profBinary}}
+  \item{object}{an instance of class \code{profBinary}}
+  \item{...}{additional arguments (not used)}
 }
 
 \details{

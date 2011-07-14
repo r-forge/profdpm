@@ -7,10 +7,11 @@
     \code{summary.profLinear} is an S3 method to summarize objects of the class \code{profLinear}.
 }
 \usage{
-summary.profLinear(x)
+\method{summary}{profLinear}(object, ...)
 }
 \arguments{
-  \item{x}{an instance of class \code{profLinear}}
+  \item{object}{an instance of class \code{profLinear}}
+  \item{...}{additional arguments (not used)}
 }
 
 \details{

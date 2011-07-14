@@ -1,11 +1,11 @@
 summary.profBinary <-
-function (x, ...) 
+function (object, ...) 
 {
-    r <- length(unique(x$clust))
-    q <- ncol(x$y)
-    tclust <- table(x$clust)
-    term.labels <- attr(terms(x$model), "term.labels")
-    if (attr(terms(x$model), "intercept")) 
+    r <- length(unique(object$clust))
+    q <- ncol(object$y)
+    tclust <- table(object$clust)
+    term.labels <- attr(terms(object$model), "term.labels")
+    if (attr(terms(object$model), "intercept")) 
         term.labels <- c("(intercept)", term.labels)
     cat("----------\n")
     out <- vector("list", length = r)
@@ -13,9 +13,9 @@ function (x, ...)
         out[[cls]]$groups <- tclust[cls]
         cat("cluster: ", cls, "\n", sep = "")
         cat("groups:  ", tclust[cls], "\n", sep = "")
-        M <- x$a[[cls]] / (x$a[[cls]] + x$b[[cls]])
-        lower <- qbeta(0.025, x$a[[cls]], x$b[[cls]])
-        upper <- qbeta(0.975, x$a[[cls]], x$b[[cls]])
+        M <- object$a[[cls]] / (object$a[[cls]] + object$b[[cls]])
+        lower <- qbeta(0.025, object$a[[cls]], object$b[[cls]])
+        upper <- qbeta(0.975, object$a[[cls]], object$b[[cls]])
         info <- data.frame(estimate = M, lower95 = lower, 
             upper95 = upper)
         row.names(info) <- term.labels
