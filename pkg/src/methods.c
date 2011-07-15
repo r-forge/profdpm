@@ -2,7 +2,7 @@
 
 pdpm_t *     pdpm_init(unsigned int ngr) {
     unsigned int i;
-    pdpm_t * obj = R_alloc(1, sizeof(pdpm_t));
+    pdpm_t * obj = (pdpm_t*) R_alloc(1, sizeof(pdpm_t));
     obj->flags = 0;
     obj->mem = sizeof(pdpm_t);
     obj->vcl = pdpm_alloc(obj, ngr, sizeof(unsigned int));
