@@ -2,7 +2,7 @@
 
 void pdpmbm_add( pdpm_t * obj, unsigned int grp, unsigned int cls ) {
     pdpmbm_t * mdl = (pdpmbm_t *) obj->model;
-    unsigned int i, j, index;
+    unsigned int i;
     if( grp >= obj->ngr || cls >= obj->ngr )
         error( "pdpmb_add: invalid argument: grp = %u cls = %u", grp, cls ); 
     //set vcl, recompute gcl, and possibly ncl
@@ -16,7 +16,7 @@ void pdpmbm_add( pdpm_t * obj, unsigned int grp, unsigned int cls ) {
 
 void pdpmbm_sub( pdpm_t * obj, unsigned grp, unsigned int cls ) {
     pdpmbm_t * mdl = (pdpmbm_t *) obj->model;
-    unsigned int i, j, index;
+    unsigned int i;
     if( grp >= obj->ngr || cls >= obj->ngr )
         error( "pdpmb_sub: invalid argument: grp = %u", grp );
     //set vcl, recompute gcl, and possibly ncl

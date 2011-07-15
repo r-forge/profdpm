@@ -5,9 +5,7 @@ SEXP profBinary(SEXP y, SEXP clust, SEXP param, SEXP method,\
     SEXP retval, elem, names, class, dim;
     pdpm_t * obj;
     pdpmbm_t * mdl;
-    int i, j, k, cls, elt, onei=1; 
-    double *xp, *yp, oned=1.0;
-    unsigned int *buf;
+    int i, j, cls, elt; 
 
     //setup the return value 
     PROTECT(retval = allocVector(VECSXP, 6));

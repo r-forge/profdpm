@@ -210,7 +210,7 @@ double method_testmergep( pdpm_t * obj, unsigned int cls1, unsigned int cls2 ) {
 }
 
 void method_gibbs( pdpm_t * obj, int maxiter, double crit) {
-    unsigned int i, *vcl_best, cls, grp, iter = 0, test;
+    unsigned int i, *vcl_best, cls, grp, iter = 0;
     unsigned int cls_old, cls_new, *proposal_cls, proposal_ncl;
     double stopcrit = 1.0, logp_best, *proposal_logp;
 
@@ -269,7 +269,7 @@ void method_gibbs( pdpm_t * obj, int maxiter, double crit) {
 }
 
 void method_stoch( pdpm_t * obj, int maxiter, double crit) {
-    unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0, spmercls;
+    unsigned int i, *vcl_old, *grps, ngrps, cls, iter = 0;
     double logp_old, pdel = 1, pcum = 0;
 
     //allocate memory for vcl_old, grps
@@ -407,7 +407,7 @@ void method_fast(pdpm_t * obj) {
     // 2. Assign first observation to first cluster
     // 3. Assign subsequent observations to new or existing clusters
     //    such that conditional posterior is largest.
-    unsigned int i, tmp, swp, grp, *grp_list;
+    unsigned int tmp, swp, grp, *grp_list;
     unsigned int cls, cls_best, ncl;
     double del, accu, cent, hund;
     accu = 0.0;
