@@ -63,11 +63,11 @@ The \pkg{profdpm} package facilitates inference at the posterior mode for a clas
 \newcommand{\bPhi}{\boldsymbol{\Phi}}
 \newcommand{\bbeta}{\boldsymbol{\beta}}
 \newcommand{\bgamma}{\boldsymbol{\gamma}}
-\newcommand{\bXp}{\boldsymbol{X}^{\prime}}
+\newcommand{\bXp}{\boldsymbol{X}^{\top}}
 \newcommand{\bx}{\boldsymbol{x}}
 \newcommand{\bX}{\boldsymbol{X}}
 \newcommand{\bI}{\boldsymbol{I}}
-\newcommand{\byp}{\boldsymbol{y}^{\prime}}
+\newcommand{\byp}{\boldsymbol{y}^{\top}}
 \newcommand{\by}{\boldsymbol{y}}
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bm}{\boldsymbol{m}}
@@ -76,9 +76,9 @@ The \pkg{profdpm} package facilitates inference at the posterior mode for a clas
 \begin{document}
 
 \section[Intro]{Introduction}
-\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2011}. This package facilitates inference at the posterior mode in a class of conjugate product partition models (PPM) by approximating the maximum {\it a posteriori} data partition. The class of PPMs is motivated by an augmented formulation of the Dirichlet process mixture, which is currently the only available member of this class. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, their associated summary methods \code{summary.profBinary} and \code{summary.profLinear}, and a function (\code{pci}) that computes several metrics of agreement between two data partitions. The \pkg{profdpm} package was designed to be extensible.
+\pkg{profdpm} is an extension package for the \proglang{R} language and environment for statistical computing \citep{R2011}. This package facilitates inference at the posterior mode in a class of conjugate product partition models (PPM) by approximating the maximum {\it a posteriori} data partition. The class of PPMs is motivated by an augmented formulation of the Dirichlet process mixture, which is currently the only available member of this class. The \pkg{profdpm} package consists of two model-fitting functions, \code{profBinary} and \code{profLinear}, their associated summary methods \code{summary.profBinary} and \code{summary.profLinear}, and a function (\code{pci}) that computes several metrics of agreement between two data partitions. However, the \pkg{profdpm} package was designed to be extensible to other types of product partition models.
 
-The remainder of this article proceeds as follows: the relevant theory of product partition models is discussed in section \ref{PPMs}, the underlying \proglang{C} methods are detailed in section \ref{Code}, discussion and examples are presented in sections \ref{Examples:profLinear} and \ref{Examples:profBinary}. Section \ref{Extensions} discusses some future directions for the \pkg{profdpm} package.\\
+The remainder of this article proceeds as follows: the relevant theory of product partition models is discussed in Section~\ref{PPMs}, the underlying \proglang{C} methods are detailed in Section~\ref{Code}, discussion and examples are presented in Sections~\ref{Examples:profLinear} and \ref{Examples:profBinary}. Finally, Section~\ref{Extensions} discusses some future directions for the \pkg{profdpm} package.\\
 
 \section[PPMs]{Product partition models} \label{PPMs}
 Consider the following hierarchical Bayesian model for a collection of possibly multivariate observations $\by = \{y_1, \ldots, y_n\}$:
@@ -92,7 +92,7 @@ where $\bz = \{z_1, \ldots, z_n\}$ is a collection of cluster membership variabl
 \begin{eqnarray}
 p(\bz|\by) \propto \prod_{k=1}^r c_k(\bz) \int L(\phi_k|\by,\bz) \pi_{\phi}(\phi_k) d\phi_k , \label{eqn:posterior}
 \end{eqnarray}
-where $L(\phi_k|\by) = \prod_{i=1}^n f(y_i|\phi_k)^{I(z_i=k)}$ is the cluster-specific likelihood. Hence, the product partition model is conjugate in the sense that both prior and posterior may be written as a product of cluster-specific terms. Further details regarding the PPM are given in \citet{Hartigan1990} and \citet{BarryHartigan1992}.
+where $L(\phi_k|\by,\bz) = \prod_{i=1}^n f(y_i|\phi_k)^{I(z_i=k)}$ is the cluster-specific likelihood. Hence, the product partition model is conjugate in the sense that both prior and posterior may be written as a product of cluster-specific terms. Further details regarding the PPM are given in \citet{Hartigan1990} and \citet{BarryHartigan1992}.
 
 A maximum {\it a posteriori} (MAP) estimate of the data partition variable $\bz$ partitions the data into clusters. The principal difficulty with MAP estimation is the size of the partition space \citep[see the `Bell number',][]{Bell1934, Rota1964}. Hence, computing the MAP estimate using enumerative methods is not practical.
 
@@ -101,7 +101,7 @@ A maximum {\it a posteriori} (MAP) estimate of the data partition variable $\bz$
 \begin{displaymath}
 p(\phi_k | \by, \hat{\bz}) \propto L(\phi_k|\by, \hat{\bz}) \pi_{\phi}(\phi_k).
 \end{displaymath}
-For PPMs implemented in the \pkg{profdpm} framework, the likelihood and prior over $\phi_k$ are selected to be conjugate in $\phi_k$. Hence, the integral in expression (\ref{eqn:posterior}) has simplified form.
+For PPMs implemented in the \pkg{profdpm} framework, the likelihood and prior over $\phi_k$ are selected to be conjugate in $\phi_k$. Hence, the integral in Equation~\ref{eqn:posterior} has simplified form.
 
 The \pkg{profdpm} package computes a MAP estimate for two types of PPMs, corresponding to the \proglang{R} functions \code{profLinear} and \code{profBinary}. Both functions accept model formulae, and return an instance of the class \code{profLinear} or \code{profBinary} respectively. Instances of these classes consist of a data partition estimate and other information related to profile inference. 
 
@@ -123,7 +123,7 @@ y_{ij} | z_i = k, \phi_{kj} & \sim & B(\phi_{kj}) \nonumber \\
 \phi_{kj} & \sim & \beta(a_0, b_0) \nonumber \\
 \bz & \sim & \pi_{\bz}(\bz) \propto \prod_{k=1}^r \alpha \Gamma(n_k),
 \end{eqnarray}
-where $y_{ij}$ for $j = 1,\ldots,q$ is the $j^{th}$ binary observation for a subject $i$, $B$ represents the Bernoulli distribution with probability $\phi_{kj}$, and $\beta$ represents the beta distribution with shape parameters $a_0$ and $b_0$. Conditional on an estimated partition, $\phi_{kj}$ are independently beta distributed {\it a posteriori} with shape parameters $a_{kj}$ and $b_{kj}$. This PPM models multivariate binary outcomes only ({\it i.e.} without covariates). Hence, the set of outcomes is specified by supplying a one-sided \proglang{R} formula. The \code{profBinary} function returns the posterior statistics $a_{kj}$ and $b_{kj}$ for $k=1,\ldots,r$ and $j=1,\ldots,q$.
+where $y_{ij}$ for $j = 1,\ldots,q$ is the $j^{th}$ binary observation for a subject $i$, $B$ represents the Bernoulli distribution with probability $\phi_{kj}$, and $\beta$ represents the beta distribution with shape parameters $a_0$ and $b_0$. Conditional on an estimated partition, $\phi_{kj}$ are independently beta distributed {\it a posteriori} with shape parameters $a_{kj}$ and $b_{kj}$. This PPM models multivariate binary outcomes only ({\it i.e.}, without covariates). Hence, the set of outcomes is specified by supplying a one-sided \proglang{R} formula. The \code{profBinary} function returns the posterior statistics $a_{kj}$ and $b_{kj}$ for $k=1,\ldots,r$ and $j=1,\ldots,q$.
 
 
 \subsection[Estimation]{Partition Estimation} \label{Estimation}
@@ -135,7 +135,7 @@ The third strategy is a variant of the Sequential Update and Greedy Search (SUGS
 
 The last method is an iterative stochastic search utilizing `explode' and `merge' operations on the clusters of a partition. At the explode step, a randomly selected subset of observations are redistributed uniformly at random to an existing or new cluster. Each of the exploded observations are then merged with one of the existing clusters in a sequentially optimal fashion. The explode-merge method is motivated by the split-merge Metropolis Hastings algorithms of \citet{GreenRichardson2001}, and \citet{JainNeal2004, JainNeal2007}. This method utilizes a Markov chain to approximate the MAP estimate, but does not sample from the posterior distribution over the data partition. Hence, the explode-merge method avoids the complexity and computational expense of ensuring the chain is ergodic. 
 
-The following pseudocode describes the stochastic method at iteration $t$:
+The following pseudocode routine describes the stochastic method from iteration $t$ to $t+1$. The return value is the MAP estimate at time $t+1$.
 {
 \singlespacing
 \begin{algorithmic}[1]
@@ -158,7 +158,7 @@ The following pseudocode describes the stochastic method at iteration $t$:
     \ENDIF
 \end{algorithmic}
 }  
-The explode-merge optimization terminates when the change in $p(\bz^{\prime}|\by)$ from one iteration to the next is less than a threshold value ({\it i.e.} the \code{crit} argument to \code{profBinary} and \code{profLinear}). Because the partition state is discrete, improvements in the marginal posterior mass may be irregular. The \pkg{profdpm} package implements a moving-average in calculating improvement.
+The explode-merge optimization terminates when the change in $p(\bz^{\prime}|\by)$ from one iteration to the next is less than a threshold value ({\it i.e.}, the \code{crit} argument to \code{profBinary} and \code{profLinear}). Because the partition state is discrete, improvements in the marginal posterior mass may be irregular. The \pkg{profdpm} package implements a moving-average in calculating improvement.
 
 \section[Code]{Programming strategy} \label{Code}
 
@@ -185,13 +185,13 @@ void          * model;   //model specific/private data
 } pdpm_t;
 \end{verbatim}
 
-The \code{flags} member of \code{struct pdpm\_t} is a bitmask for flags, for example, to indicate that convergence criteria for an optimization strategy are met. The \code{alp} member is the Dirichlet process precision parameter $\alpha$. In the \pkg{profdpm} framework, multivariate observations, or univariate observations that should always be clustered together are called `groups'. When no complex grouping structure is present, each observation forms a singleton group. Clusters consist of one or more groups. The \code{ngr} and \code{ncl} members of \code{struct pdpm\_t} store the number of groups and clusters that comprise the PPM state, respectively. Each group is assigned exactly one cluster, identified by an integer stored in the \code{vcl} array. Hence, \code{vcl[4]} indexes the cluster number for group four. For groups that are not yet assigned to a cluster ({\it i.e.} during initialization), the corresponding \code{vcl} entry may take the value defined by the \proglang{C} preprocessor macro \code{BAD\_CLS}. The \code{gcl} array stores the number of groups assigned to each cluster. For example, \code{gcl[3]} indexes the number of groups assigned to cluster number three. Because each group might form a singleton cluster, \code{vcl} and \code{gcl} are both allocated to have length \code{ngr}. The \code{logpval} member stores the unnormalized log posterior mass value at the current state.
+The \code{flags} member of \code{struct pdpm\_t} is a bitmask for flags, for example, to indicate that convergence criteria for an optimization strategy are met. The \code{alp} member is the Dirichlet process precision parameter $\alpha$. In the \pkg{profdpm} framework, multivariate observations, or univariate observations that should always be clustered together are called `groups'. When no complex grouping structure is present, each observation forms a singleton group. Clusters consist of one or more groups. The \code{ngr} and \code{ncl} members of \code{struct pdpm\_t} store the number of groups and clusters that comprise the PPM state, respectively. Each group is assigned exactly one cluster, identified by an integer stored in the \code{vcl} array. Hence, \code{vcl[4]} indexes the cluster number for group four. For groups that are not yet assigned to a cluster ({\it i.e.}, during initialization), the corresponding \code{vcl} entry may take the value defined by the \proglang{C} preprocessor macro \code{BAD\_CLS}. The \code{gcl} array stores the number of groups assigned to each cluster. For example, \code{gcl[3]} indexes the number of groups assigned to cluster number three. Because each group might form a singleton cluster, \code{vcl} and \code{gcl} are both allocated to have length \code{ngr}. The \code{logpval} member stores the unnormalized log posterior mass value at the current state.
 
-The \pkg{profdpm} package implements four methods for partition estimation (see section \ref{PPMs}). Each utilizes a Markov-like process. That is, a model state is initialized and updated sequentially, where the updated state depends on the previous state. Each of the four methods decompose into a series of just two simple operations on the model state: (1) reassigning a single observation from one cluster to another, and (2) computing the marginal posterior mass at the current partition estimate.
+The \pkg{profdpm} package implements four methods for partition estimation (see Section~\ref{PPMs}). Each utilizes a Markov-like process. That is, a model state is initialized and updated sequentially, where the updated state depends on the previous state. Each of the four methods decompose into a series of just two simple operations on the model state: (1) reassigning a single observation from one cluster to another, and (2) computing the marginal posterior mass at the current partition estimate.
 
-For example, consider the SUGS optimization strategy. At iteration $t$, group $t+1$ is either assigned to an existing cluster, or assigned to a new cluster. In order to evaluate the alternatives, group $t+1$ is reassigned to each potential cluster in sequence. The marginal posterior mass is evaluated after each reassignment. Finally, group $t+1$ is reassigned to the cluster corresponding to the largest in posterior mass. Hence, each iteration of the SUGS algorithm decomposes into a series of reassignments and posterior mass calculations. No other operations on the model state are necessary. 
+For example, consider the SUGS optimization strategy. At iteration $t$, group $t+1$ is either assigned to an existing cluster, or assigned to a new cluster. In order to evaluate the alternatives, group $t+1$ is reassigned to each potential cluster in sequence. The marginal posterior mass is evaluated after each reassignment. Finally, group $t+1$ is reassigned to the cluster corresponding to the largest posterior mass. Hence, each iteration of the SUGS algorithm decomposes into a series of reassignments and posterior mass calculations. No other operations on the model state are necessary. 
  
-Manipulating the model state with simple operations is strategic. By implementing the simple operations efficiently, estimation algorithms may be written generically, and with emphasis on simplicity. Generic application of the estimation routines requires implementing the two simple operations for each specific PPM type ({\it e.g.} two for product partitions of linear models, and two for multivariate binary models).
+Manipulating the model state with simple operations is strategic. By implementing the simple operations efficiently, estimation algorithms may be written generically, and with emphasis on simplicity. Generic application of the estimation routines requires implementing the two simple operations for each specific PPM type ({\it e.g.}, two for product partitions of linear models, and two for multivariate binary models).
 
 The \code{move} and \code{logp} members of \code{struct pdpm\_t} are pointers to \proglang{C} functions that implement the reassignment and posterior mass calculation routines. The \code{move} member should point to a function that takes three arguments; a pointer to the PPM state structure (\code{obj}), a group number (\code{grp}), and a cluster number (\code{cls}). That is, in model state \code{obj}, the group with number \code{grp} is reassigned to the cluster with number \code{cls}. The function pointed-to by \code{move} should not return a value, but should update the \code{ncl}, \code{vcl}, and \code{gcl} members to reflect the reassignment operation. The \code{logp} member should point to a function that takes the PPM state structure as an argument, and returns the unnormalized log posterior mass, evaluated at the current model state. The \code{logp} method may or may not update the \code{logpval} member automatically.
 
@@ -217,11 +217,11 @@ The \pkg{profdpm} package leaves the programmer to balance the antagonistic rela
 
 \section[Illustration]{Illustration: \code{profLinear}} \label{Examples:profLinear}
 
-The \pkg{profdpm} package adheres to the principle of `convention over configuration'. That is, reasonable default values are selected for model and optimization parameters, but these may also be configured. This strategy may be contrasted with that of the BUGS \citep{LunnSpiegelhalterThomasBest2009} language, where most modeling and sampling aspects must be configured explicitly.   
+The \pkg{profdpm} package adheres to the principle of `convention over configuration'. That is, reasonable default values are selected for model and optimization parameters, but these may also be configured. This strategy is contrasted with the BUGS \citep{LunnSpiegelhalterThomasBest2009} language, where most modeling and sampling aspects must be configured explicitly.   
 
 \subsection[Defaults]{Default Parameters}
 
-By default, the \code{profLinear} and \code{profBinary} functions utilize the agglomerative optimization method. This method is deterministic, relatively fast, and yields MAP estimates that are comparable with other optimization strategies. However, the best MAP approximations are usually obtained using the Gibbs and stochastic search methods, at the expense of additional computation and other consequences of stochastic optimization ({\it e.g.} estimates may not be identical over repeated optimizations). The SUGS method is recommended only for fast initial partition estimation, or in nonparametric applications of the kind considered by \citep{WangDunson2010}.    
+By default, the \code{profLinear} and \code{profBinary} functions utilize the agglomerative optimization method. This method is deterministic, relatively fast, and yields MAP estimates that are comparable with other optimization strategies. However, the best MAP approximations are usually obtained using the Gibbs and stochastic search methods, at the expense of additional computation and other consequences of stochastic optimization ({\it e.g.}, estimates may not be identical over repeated optimizations). The SUGS method is recommended only for fast initial partition estimation, or in nonparametric applications of the kind considered by \citet{WangDunson2010}.    
 
 All PPMs implemented in the \pkg{profdpm} framework must specify the Dirichlet process precision parameter $\alpha$, which affects the prior distribution over the data partition parameter. Smaller values result in more concentrated prior mass on partitions with fewer clusters. Conversely, larger values for $\alpha$ concentrate prior mass on partitions with additional clusters. This effect may be summarized by computing the prior expected number of clusters. \citet{Antoniak1974} gives two expressions, one approximate and one exact, for the expected number of clusters in a Dirichlet process mixture. The exact expression is given by \[\sum_{i = 1}^n \frac{\alpha}{\alpha + i - 1}.\] The approximate expression is \[\alpha \log\left(\frac{n + \alpha}{\alpha}\right).\] When $\alpha >> 1$, the approximate expression performs well, otherwise the exact expression should be used.
 
@@ -236,11 +236,11 @@ b_k  & = & b_0 + \by^{(k)\prime}\by^{(k)} + s_0\bm_0^{\prime}\bm_0 - \bm_k^{\pri
 \end{eqnarray}
 for $i=1\ldots n$, where $\by^{(k)}$ is the vector formed by concatenating all of the $y_{i}$ in the $k^{th}$ cluster, $\bX^{(k)}$ is the matrix formed by joining as rows, the $\bx_{i}$ of the $k^{th}$ cluster, and $n_k$ is the number of groups comprising the $k^{th}$ cluster.
 
-Equation block \ref{posterior_stats} isolates the influence of prior parameters on posterior quantities. In particular, prior influence may be reduced by setting each parameter close to zero. Note that the prior (normal-gamma) distribution is improper for $a_0$ less than one. However, the posterior is always proper for $n \geq 1$. The \code{profLinear} function specifies $a_0 = 0.001$, $b_0 = 0.001$, $s_0 = 1.000$, and $\bm_0 = [0.000,\ldots,0.000]$ by default. These default values encode a heavy-tailed prior distribution over the linear coefficients, and weights the posterior distribution more heavily by the observed data. 
+Equation~\ref{posterior_stats} isolates the influence of prior parameters on posterior quantities. In particular, prior influence may be reduced by setting each parameter close to zero. Note that the prior (normal-gamma) distribution is improper for $a_0$ less than one. However, the posterior is always proper for $n \geq 1$. The \code{profLinear} function specifies $a_0 = 0.001$, $b_0 = 0.001$, $s_0 = 1.000$, and $\bm_0 = [0.000,\ldots,0.000]$ by default. These default values encode a heavy-tailed prior distribution over the linear coefficients, and weights the posterior distribution more heavily by the observed data. 
 
 \subsection[Example]{\code{profLinear} Example}
 
-The following example simulates a dataset consisting of $99$ longitudinal measures on $33$ units of observation, or subjects. Each subject is measured at three times, drawn uniformly and independently from the unit interval. Each measure is drawn independently from the normal distribution with one of three linear mean functions of time, and with unit variance. The linear mean functions each have zero intercept and vary by slope. The longitudinal structure imposes a grouping among measurements on a single subject. Observations grouped in this way should always clustered together. Grouping structure is specified using the \code{group} parameter; a factor that behaves similarly to the \code{groups} parameter of \pkg{lattice} graphics functions. For the PPM of conjugate binary models, the grouping structure is imposed by the model formula. More specifically, grouped observations correspond to rows of the model matrix, resulting from a call to \code{model.matrix} on the formula passed to \code{profBinary}. Hence, the \code{profBinary} function does not have a \code{group} parameter in its prototype. 
+The following example simulates a dataset consisting of $99$ longitudinal measures on $33$ units of observation, or subjects. Each subject is measured at three times, drawn uniformly and independently from the unit interval. Each of the three measures per subject are drawn independently from the normal distribution with one of three linear mean functions of time, and with unit variance. The linear mean functions each have zero intercept and vary by slope. The longitudinal structure imposes a grouping among measurements on a single subject. Observations grouped in this way should always cluster together. Grouping structure is specified using the \code{group} parameter; a factor that behaves similarly to the \code{groups} parameter of \pkg{lattice} graphics functions. For the PPM of conjugate binary models, the grouping structure is imposed by the model formula. More specifically, grouped observations correspond to rows of the model matrix, resulting from a call to \code{model.matrix} on the formula passed to \code{profBinary}. Hence, the \code{profBinary} function does not have a \code{group} parameter in its prototype. 
 
 The goal of the following example is to recover the simulated partition and conduct profile inference on the slope parameter of each cluster. The following \proglang{R} code block creates and fits the simulated dataset. To ensure that the figures and statistics presented in this document are more reproducible, the pseudo random number generator seed is fixed. 
 <<echo=FALSE>>=
@@ -261,11 +261,11 @@ dat <- sim()
 library("profdpm")
 fitL <- profLinear(y ~ 0 + x, group=group, data=dat)
 @
-The \code{profLinear} returns an object of class \code{profLinear}. The \code{summary.profLinear} method prints and returns (invisibly) summary information regarding the estimated product partition model, including 95\% credible intervals for the linear coefficients under a Laplace approximation to the profile posterior distribution.
+The \code{profLinear} function returns an object of class \code{profLinear}. The \code{summary.profLinear} method prints and returns (invisibly) summary information regarding the estimated product partition model, including 95\% credible intervals for the linear coefficients under a Laplace approximation to the profile posterior distribution.
 
 Figure~\ref{fig:sim1} presents the simulated data in a scatterplot. For each cluster identified in the estimated partition, the profile posterior mean slope is represented by a dashed line. Approximate $95\%$ credible limits for the slope are represented by flanking solid lines.
 
-<<label=figSim1, include=FALSE>>=
+<<label=figSim1, include=FALSE, eval=FALSE>>=
 sfitL <- summary(fitL)
 plot(dat$x, dat$y, col=grey(0.9), xlab='x', ylab='y')
 for(grp in unique(dat$group)) {
@@ -295,7 +295,7 @@ Partition estimate comparisons are made using one of many statistics designed fo
 
 Consider two partitions represented by the cluster assignments $\bz_a$ and $\bz_b$. Let $n_{11}$ be the number of unique ${i,j}$ pairs such that $z_{ai} = z_{aj}$ {\it and} $z_{bi} = z_{bj}$. In words, $n_{11}$ is the count of observation pairs where the pair are clustered together in both partitions. Let $n_{00}$ be the count of observation pairs where the pair are assigned different clusters in both partitions. Hence, $n_{11}$ and $n_{00}$ are the counts of observation pairs where partitions $\bz_a$ and $\bz_b$ are in agreement with regard to cluster assignment. Further define $n_{10}$ as the count of observation pairs where the pair are assigned the same cluster in partition $\bz_a$ but different clusters in partition $\bz_b$, and let $n_{01}$ be the converse. Hence, $n_{01}$ and $n_{10}$ are the counts of observation pairs where partitions $\bz_a$ and $\bz_b$ are discordant. Also observe the equivalence $n(n-1)/2 = n_{11} + n_{00} + n_{10} + n_{01}$, where $n(n-1)/2$ is the number of distinct pairs of $n$ items. Each of the indices mentioned above are a function of these counts.
 
-The Rand index is the most intuitive. It is the proportion of concordant observation pairs: \[\frac{n_{11}+n_{00}}{n_{11}+n_{00}+n_{01}+n_{10}}.\] The Fowlkes and Mallows index is given by \[\frac{n_{11}}{\sqrt{(n_{11}+n_{01})(n_{11}+n_{10})}}.\] The Wallace indices are respectively given by \[\frac{n_{11}}{n_{11}+n_{10}} \quad \mathrm{and} \quad \frac{n_{11}}{n_{11}+n_{01}}.\] The Jaccard index is given by \[\frac{n_{11}}{n_{11}+n_{01}+n_{10}}.\] Each of these indices take values in the closed interval $[0,1]$, where larger values indicate greater agreement. Additional details are found in the cited works.
+The Rand index is the most intuitive. It is the proportion of concordant observation pairs: \[\frac{n_{11}+n_{00}}{n_{11}+n_{00}+n_{01}+n_{10}}.\] The Fowlkes and Mallows index is given by \[\frac{n_{11}}{\sqrt{(n_{11}+n_{01})(n_{11}+n_{10})}}.\] The Wallace indices are respectively given by \[\frac{n_{11}}{n_{11}+n_{10}} \quad \mathrm{and} \quad \frac{n_{11}}{n_{11}+n_{01}}.\] The Jaccard index is given by \[\frac{n_{11}}{n_{11}+n_{01}+n_{10}}.\] Each of these indices take values in the closed interval $[0,1]$, where larger values indicate greater agreement. The cited works, and the associated discussions consider the relative merits of each index.
 
 The \code{pci} function computes each of the partition comparison indices. The returned value is a named vector, where the names indicate the index computed. The Rand, Fowlkes and Mallows, Wallace, and Jaccard indices are abbreviated by \code{R}, \code{FM}, \code{W10}, \code{W01}, and \code{J} respectively. The following demonstrates the \code{pci} function using the estimated and simulated partitions of the previous example.
 <<>>=
@@ -310,7 +310,7 @@ The estimated partition has good agreement with the simulated partition in the e
 
 The next example assesses the sensitivity of simulated partition recovery to reduced heterogeneity in the slopes of simulated mean functions. The three slopes in the last example were $-10$, $0$, and $10$. Hence, slope heterogeneity is reduced by multiplying each slope by a proportion. The following \proglang{R} code evaluates the Rand index between the estimated and simulated partition in a series of simulated datasets with reduced slope heterogeneity.
 
-<<label=figSim2, include=FALSE, keep.source=TRUE>>=
+<<label=figSim2, include=FALSE, keep.source=TRUE, eval=FALSE>>=
 mult <- rep(seq(1, 0.01, length.out=33), 10)
 Rand <- sapply(mult, function(mult) {
     dat <- sim(mult)
@@ -324,7 +324,7 @@ points(mult + rnorm(length(mult),0,1/200),
      Rand + rnorm(length(Rand),0,1/200), col=grey(0.9))
 @  
 
-Figure \ref{fig:sim2} illustrates the effect of reduced slope heterogeneity on the Rand index between estimated and simulated partitions. Clearly, there is less agreement in datasets where slope heterogeneity is reduced. Limited or absent grouping information may also hinder recovery of the simulated partition. 
+Figure~\ref{fig:sim2} illustrates the effect of reduced slope heterogeneity on the Rand index between estimated and simulated partitions. Clearly, there is less agreement in datasets where slope heterogeneity is reduced. Limited or absent grouping information may also hinder recovery of the simulated partition. 
 
 \begin{figure}[h!]
 \begin{center}
@@ -360,7 +360,7 @@ Conditional on the estimated partition, the outcome probabilities for each clust
 
 \subsection[Sensitivity]{Sensitivity to DPM Precision $\alpha$}
 
-The value of the DPM precision parameter $\alpha$ has a significant effect on simulated partition recovery in the last example. To illustrate, consider repeating the preceding analysis under a sequence of values for $\alpha$. Figure \ref{fig:sim3} presents the Rand index for the sequence of estimated partitions versus the simulated partition versus $\alpha$.
+The value of the DPM precision parameter $\alpha$ has a significant effect on simulated partition recovery in the last example. To illustrate, consider repeating the preceding analysis under a sequence of values for $\alpha$. Figure~\ref{fig:sim3} presents the Rand index for the sequence of estimated partitions versus the simulated partition versus $\alpha$.
 
 
 <<label=figSim3, include=FALSE, keep.source=TRUE>>=
@@ -371,6 +371,7 @@ Rand <- sapply(alpha, function(alpha) {
 })
 lws <- lowess(x=log(alpha),y=Rand)
 plot(lws$x, lws$y, type='l',
+     ylim=c(0.45,1),
      xlab=expression(paste('log', alpha)),
      ylab='Rand index')
 
@@ -387,18 +388,18 @@ points(log(alpha), Rand + rnorm(length(Rand),0,1/200),
 \caption{Scatterplot of Rand indices (estimated versus simulated partition) against DPM precision parameter $\alpha$. Smaller $\alpha$ imposes a stronger penalty against partitions with many clusters. Light gray points represent estimated partitions. Jitter was added to aid in visual discrimination. The black line is a LOWESS estimate of the trend in Rand index versus $\alpha$. \label{fig:sim3}}
 \end{figure}
 
-In these data, very small $\alpha$ is required to most closely recover the simulated partition. However, in practice, this optimal precision parameter is unknown. To overcome this, we recommend that $\alpha$ be fixed in some principled manner. The default value for $\alpha$ ($1/150$) concentrates prior mass on partitions with few clusters. Even so, the corresponding partition estimate consisted of sixteen clusters in these data, fourteen more than the simulated partition.
+In these data, very small $\alpha$ is required to most closely recover the simulated partition. However, in practice, this optimal precision parameter is unknown. To overcome this, we recommend that $\alpha$ be fixed in a principled manner. The default value for $\alpha$ ($1/150$) concentrates prior mass on partitions with few clusters. Even so, the corresponding partition estimate consisted of sixteen clusters in these data, fourteen more than the simulated partition.
 
-\citet{EscobarWest1995} warn that `sensitivity to $\alpha$ is marked', that the Dirichlet process precision is `a critical smoothing parameter', and that the observed data might be used to draw inferences about $\alpha$. The precision parameter is then treated as an unknown parameter with heavily right skewed gamma prior density. Through inspection of the posterior density, the authors conclude that the data are informative about $\alpha$. Posterior inference about $\alpha$ has been adopted in much of the subsequent Dirichlet process literature \citep{BleiJordan2006,DunsonXueCarin2008,RodriguezDunsonGelfand2009,WangDunson2010}.
+\citet{EscobarWest1995} warn that `sensitivity to $\alpha$ is marked', that the Dirichlet process precision is `a critical smoothing parameter', and that the observed data might be used to draw inferences about $\alpha$. The authors treat the precision as an unknown parameter with heavily right skewed gamma prior density. Through inspection of the posterior density, they conclude that the data are informative about $\alpha$. Posterior inference about $\alpha$ has been similarly adopted in much of the subsequent Dirichlet process literature \citep{BleiJordan2006,DunsonXueCarin2008,RodriguezDunsonGelfand2009,WangDunson2010}.
 
 Since the DP precision is an important smoothing parameter, we are concerned that allowing the data to inform our belief about $\alpha$ may result in too little smoothing. Hence, we recommend fixing $\alpha$. Arguments and experiments regarding fixed precision are also prevalent in the DP literature \citep{BushMacEachern1996, Daume2007, DunsonPark2008}. 
 
 \section[Extensions]{Extensions} \label{Extensions}
-The \pkg{profdpm} package is currently limited to product partitions of linear and binary models, and the optimization strategies described above. Additional models may be implemented as need arises. Also, in the current framework, each cluster of the partitioned data is required to have an identical parametric model, albeit with different parameters. This contrasts, for example, with the finite mixture clustering methods implemented in the \pkg{flexmix} package, which allow multiple parametric forms. This type of functionality is possible in the \pkg{profdpm} framework by specifying a sufficiently complex \code{model} structure, and corresponding \code{move} and \code{logp} methods. 
+The \pkg{profdpm} package is currently limited to product partitions of linear and binary models, and the optimization strategies described above. Additional models may be implemented as need arises. Also, in the current framework, each cluster of the partitioned data is required to have an identical parametric model, albeit with different parameters. This contrasts, for example, with the finite mixture clustering methods implemented in the \pkg{flexmix} package \citep{flexmix2008}, which allow multiple parametric forms. This type of functionality is possible in the \pkg{profdpm} framework by specifying a sufficiently complex \code{model} structure, and corresponding \code{move} and \code{logp} methods. 
 
 Estimating a partition is computationally intensive, and an open field of computational research. Other aspects of partition estimation are also under scrutiny. For example, recent work by \citet{WangDunson2010} suggest that marginal likelihood optimization may overfit the observed data, yielding more clusters than necessary. The authors recommend a pseudo marginal likelihood (PML) approach, which imposes a leave-one-out cross-validation strategy to penalize extraneous clusters in partition estimates. The \pkg{profdpm} framework has potential to accommodate alternative likelihoods by implementing alternative \code{logp} methods.
 
-Finally, there are plans to extend the \pkg{profdpm} framework to accommodate novel PPMs by modifying the cohesion function in the prior distribution over data partitions (see section \ref{PPMs}). Note that such modifications result in PPMs other than the augmented Dirichlet process mixture. 
+Finally, there are plans to extend the \pkg{profdpm} framework to accommodate novel PPMs by modifying the cohesion function in the prior distribution over data partitions (see Section~\ref{PPMs}). Note that such modifications result in PPMs other than the augmented Dirichlet process mixture. 
 
 \section*{Acknowledgments}
 This research was partly funded by the following National Institutes of Health, National Institute of General Medical Sciences, and National Science Foundation funding projects: NIH 1T32GM074934, NIH R03CA137805, NSF DMS0604666, NIH P20RR017696.
